@@ -15,7 +15,8 @@ lang tid der er gået siden din sidste øvelse.
    - **Udstyr** – håndvægte, kettlebell, træningsbænk, pull-up bar, elastikker og/eller vægtstang. Uden
      udstyr får du kropsvægtsøvelser.
    - **Fokus** – hvad du vil træne: Bryst & skuldre, Ryg/nakke & holdning, Ben & mave, Arme – eller en
-     kombination, fx Bryst & skuldre + Arme. Vælger du intet, får du hele kroppen.
+     kombination, fx Bryst & skuldre + Arme. "Arme" dækker biceps, triceps og underarme/greb. Vælger du
+     intet, får du hele kroppen.
    - **Pauser** – hvor ofte du vil træne, om inaktivitet skal tælle som pause, og hvilket hjørne overlayet
      skal vises i.
    - **Spil** – de spil appen kender, dine egne spil og den præcise integration til CS2 og Dota 2.
@@ -34,8 +35,8 @@ lang tid der er gået siden din sidste øvelse.
 | `Ctrl+Alt+D` | Markér øvelsen som færdig       |
 | `Ctrl+Alt+S` | Spring øvelsen over             |
 
-Fra bakkeikonet kan du også skifte fokus (**Træn: …**), sætte motionen på pause (30 min, 1 time eller resten
-af dagen) og se, hvor mange øvelser du har lavet i dag.
+Fra bakkeikonet kan du også skifte fokus (**Træn: …**), søge efter opdateringer, sætte motionen på pause
+(30 min, 1 time eller resten af dagen) og se, hvor mange øvelser du har lavet i dag.
 
 > **Tip:** Kør spillet i **kantløst vindue** (borderless/windowed fullscreen). I "eksklusiv fuldskærm" kan
 > intet program vises ovenpå spillet.
@@ -101,7 +102,7 @@ at have et ikon i systembakken og at læse, hvor længe mus og tastatur har vær
 src/
   core/                    Logikken – ren JavaScript uden Electron, så den kan testes
     catalog.js             Styrkeniveauer, udstyr, fokusområder, muskelgrupper
-    exercises.js           Alle 44 øvelser med mængder, trin og tips
+    exercises.js           Alle 50 øvelser med mængder, trin og tips
     workout-engine.js      Vælger øvelse og udregner antal gentagelser
     games.js               Kendte spil og genkendelse af kørende programmer
     gsi.js                 CS2/Dota 2 Game State Integration
@@ -113,6 +114,7 @@ src/
     preload.js             Sikker bro mellem siderne og hovedprocessen
     gsi-server.js          Lokal webserver som CS2/Dota 2 sender til
     gsi-install.js         Finder spillet i Steam og installerer cfg-filen
+    updater.js             Søger efter, henter og installerer nye versioner
     process-list.js        Henter listen over kørende programmer
     store.js               Gemmer indstillinger og historik som JSON
   renderer/                Det brugeren ser
@@ -153,39 +155,51 @@ WORKOUTSLOP_DATA_DIR=.workoutslop-data npm start
 
 (På Windows i PowerShell: `$env:WORKOUTSLOP_DATA_DIR=".workoutslop-data"; npm start`)
 
-## Byg et rigtigt program (.exe)
+## Installér appen
 
-### Lad GitHub bygge det (nemmest)
+Workoutslop installeres som et almindeligt Windows-program med **ét installationsprogram**:
+`Workoutslop-Setup-x.y.z.exe`. Det lægger en genvej i startmenuen og på skrivebordet, og appen kan
+afinstalleres under **Indstillinger → Apps** som alle andre programmer. Efter installationen starter du bare
+Workoutslop fra startmenuen – eller slår **Start sammen med computeren** til i opsætningen.
 
-Hver gang du pusher til GitHub, tester og bygger `.github/workflows/build.yml` appen på en Windows-maskine:
+> **"Windows beskyttede din pc":** Programmet er ikke signeret med et (dyrt) kodesigneringscertifikat, så
+> Windows SmartScreen advarer første gang. Klik **Flere oplysninger → Kør alligevel**.
 
-1. Gå til fanen **Actions** på GitHub og klik på den seneste kørsel af **Byg Workoutslop**.
-2. Hent **Workoutslop-Windows** under **Artifacts** og pak zip-filen ud.
-3. Indeni ligger:
-   - `Workoutslop-Setup-0.1.0.exe` – installationsprogram (genvej på skrivebordet og i startmenuen).
-   - `Workoutslop-0.1.0-portable.exe` – kører uden installation, fx fra et USB-stik eller en skolecomputer.
+## Opdateringer
 
-Vil du dele programmet med andre, så ret `version` i `package.json`, commit og push et tag:
+Den installerede app holder sig selv opdateret:
+
+1. Ved opstart og derefter hver 6. time tjekker den, om der er udgivet en ny version på GitHub.
+2. Findes der en, hentes den i baggrunden, og du får en besked, når den er klar.
+3. Opdateringen installeres, næste gang du lukker Workoutslop – eller med det samme, hvis du vælger
+   **Genstart og opdatér** i bakkemenuen eller i opsætningen.
+
+Du kan også selv vælge **Søg efter opdateringer** i bakkemenuen eller nederst i opsætningens sidebjælke, hvor
+den nuværende version også står.
+
+### Udgiv en ny version
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+npm run release
 ```
 
-Så lægges `.exe`-filerne op under **Releases**, hvor alle kan hente dem.
+Kommandoen hæver versionsnummeret (fx 0.1.0 → 0.1.1), laver et git-tag og pusher det. Så bygger
+`.github/workflows/build.yml` installationsprogrammet på en Windows-maskine hos GitHub og lægger det op under
+**Releases** sammen med filen `latest.yml`, som de installerede apps bruger til at finde opdateringen.
 
-### Byg det på din egen Windows-computer
+> **Vigtigt:** Appen henter opdateringer fra GitHub Releases uden at logge ind. Det virker kun, hvis repoet er
+> **offentligt**. Er repoet privat, viser appen "Der er ikke udgivet nogen version endnu (eller GitHub-repoet er
+> privat)". Repoet kan gøres offentligt under **Settings → General → Danger Zone → Change visibility**.
+
+### Byg selv
 
 ```bash
 npm install
 npm run dist
 ```
 
-Programmerne havner i mappen `dist/`. På macOS og Linux hedder kommandoerne `npm run dist:mac` og
-`npm run dist:linux`.
-
-> **"Windows beskyttede din pc":** Programmet er ikke signeret med et (dyrt) kodesigneringscertifikat, så
-> Windows SmartScreen advarer første gang. Klik **Flere oplysninger → Kør alligevel**.
+Installationsprogrammet havner i mappen `dist/`. Ved almindelige push bygger GitHub det også – det ligger under
+**Actions → kørslen → Artifacts**.
 
 ### Tilføj en øvelse
 

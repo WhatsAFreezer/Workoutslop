@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld('workoutslop', {
     preview: (draft) => ipcRenderer.invoke('setup:preview', draft),
     save: (draft) => ipcRenderer.invoke('setup:save', draft),
     close: () => ipcRenderer.send('setup:close'),
+    checkUpdates: () => ipcRenderer.send('updates:check'),
+    installUpdate: () => ipcRenderer.send('updates:install'),
+    onUpdateStatus: listen('updates:status'),
   },
   overlay: {
     onShow: listen('overlay:show'),

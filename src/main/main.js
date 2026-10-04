@@ -23,6 +23,7 @@ const { createStore } = require('./store');
 const { listProcesses } = require('./process-list');
 const { startGsiServer } = require('./gsi-server');
 const { installIntegration, integrationStatus } = require('./gsi-install');
+const { createUpdater, describeUpdate } = require('./updater');
 const { LEVELS, EQUIPMENT, FREQUENCIES, MUSCLE_GROUPS, FOCUS_AREAS } = require('../core/catalog');
 const { EXERCISES } = require('../core/exercises');
 const engine = require('../core/workout-engine');
@@ -91,6 +92,8 @@ let lastScanAt = 0;
 let lastPause = { state: 'noGame', source: 'none', reason: 'Intet spil kører', game: null };
 let hotkeyStatus = {};
 let trayKey = '';
+let updater = null;
+let notifiedUpdateVersion = null;
 
 const pauseDetector = new PauseDetector();
 const coach = new Coach({
@@ -351,6 +354,43 @@ function createTray() {
   refreshTray(true);
 }
 
+// --- Opdateringer ----------------------------------------------------------------
+
+function updatePayload() {
+  const status = updater.status();
+  return { state: status.state, version: status.version ?? null, text: describeUpdate(status) };
+}
+
+function onUpdateStatus(status) {
+  refreshTray(true);
+  setupWindow?.webContents.send('updates:status', updatePayload());
+  if (status.state === 'ready' && notifiedUpdateVersion !== status.version && Notification.isSupported()) {
+    notifiedUpdateVersion = status.version;
+    const notification = new Notification({
+      title: `Workoutslop ${status.version} er klar`,
+      body: 'Opdateringen installeres, når du lukker appen. Klik her for at genstarte og opdatere nu.',
+      icon: APP_ICON,
+    });
+    notification.on('click', () => updater.install());
+    notification.show();
+  }
+}
+
+function updateMenu(status) {
+  const version = { label: `Version ${app.getVersion()}`, enabled: false };
+  switch (status.state) {
+    case 'dev':
+      return [version];
+    case 'ready':
+      return [{ label: `Genstart og opdatér til ${status.version}`, click: () => updater.install() }, version];
+    case 'checking':
+    case 'downloading':
+      return [{ label: describeUpdate(status), enabled: false }, version];
+    default:
+      return [{ label: 'Søg efter opdateringer', click: () => updater.check() }, version];
+  }
+}
+
 function focusLabel(focus) {
   if (focus.length === 0) return 'Hele kroppen';
   return FOCUS_AREAS.filter((area) => focus.includes(area.id))
@@ -389,7 +429,8 @@ function refreshTray(force = false) {
   const status = statusText(now);
   const today = describeToday(todaySummary(store.history, now, EXERCISES));
   const paused = coach.snoozedUntil > now;
-  const key = `${status}|${today}|${paused}|${settings.focus.join(',')}`;
+  const update = updater.status();
+  const key = `${status}|${today}|${paused}|${settings.focus.join(',')}|${update.state}|${update.percent}`;
   if (!force && key === trayKey) return;
   trayKey = key;
 
@@ -422,6 +463,7 @@ function refreshTray(force = false) {
       { label: `Træn: ${focusLabel(settings.focus)}`, submenu: focusMenu() },
       { type: 'separator' },
       { label: 'Opsætning…', click: openSetup },
+      ...updateMenu(update),
       { label: 'Afslut Workoutslop', click: () => app.quit() },
     ]),
   );
@@ -493,6 +535,8 @@ function integrationStatuses() {
 function setupData() {
   return {
     firstRun: !settings.setupComplete,
+    version: app.getVersion(),
+    update: updatePayload(),
     platform: process.platform,
     settings: pick(settings, EDITABLE_KEYS),
     catalog: {
@@ -614,6 +658,8 @@ function registerIpc() {
   });
 
   ipcMain.on('setup:close', (event) => fromSetup(event) && setupWindow?.close());
+  ipcMain.on('updates:check', (event) => fromSetup(event) && updater.check());
+  ipcMain.on('updates:install', (event) => fromSetup(event) && updater.install());
 
   ipcMain.on('overlay:size', (event, height) => {
     if (!fromOverlay(event) || !Number.isFinite(height)) return;
@@ -644,6 +690,7 @@ function start() {
   if (!settings.gsiToken)
     settings = store.saveSettings({ ...settings, gsiToken: crypto.randomBytes(16).toString('hex') });
   coach.lastCompletedAt = engine.lastCompletedAt(store.history);
+  updater = createUpdater({ onChange: onUpdateStatus });
 
   registerIpc();
   createOverlayWindow();
@@ -651,6 +698,7 @@ function start() {
   registerHotkeys();
   startGsi();
   applyLoginItem();
+  updater.start();
   scanProcesses();
   setInterval(tick, TICK_MS);
 

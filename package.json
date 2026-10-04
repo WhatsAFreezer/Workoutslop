@@ -10,10 +10,14 @@
     "test": "node --test",
     "dist": "electron-builder --win --x64 --publish never",
     "dist:mac": "electron-builder --mac --publish never",
-    "dist:linux": "electron-builder --linux --publish never"
+    "dist:linux": "electron-builder --linux --publish never",
+    "release": "npm version patch && git push --follow-tags"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
     "electron": "^44.5.1",
@@ -32,19 +36,20 @@
     ],
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        "nsis"
       ],
       "icon": "assets/icon.png"
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "shortcutName": "Workoutslop",
+      "uninstallDisplayName": "Workoutslop",
       "artifactName": "Workoutslop-Setup-${version}.${ext}"
-    },
-    "portable": {
-      "artifactName": "Workoutslop-${version}-portable.${ext}"
     },
     "mac": {
       "target": "dmg",
@@ -55,6 +60,14 @@
       "target": "AppImage",
       "category": "Game",
       "icon": "assets/icon.png"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "WhatsAFreezer",
+        "repo": "Workoutslop",
+        "releaseType": "release"
+      }
+    ]
   }
 }

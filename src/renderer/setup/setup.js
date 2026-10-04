@@ -379,6 +379,19 @@
     );
   }
 
+  // --- Opdateringer ------------------------------------------------------------------
+
+  function renderUpdate(update) {
+    $('app-version').textContent = `Workoutslop ${data.version}`;
+    $('update-text').textContent = update.text;
+    const button = $('update-btn');
+    button.hidden = update.state === 'dev';
+    button.disabled = update.state === 'checking' || update.state === 'downloading';
+    button.textContent = update.state === 'ready' ? 'Genstart og opdatér' : 'Søg efter opdateringer';
+    button.classList.toggle('primary', update.state === 'ready');
+    button.onclick = () => (update.state === 'ready' ? api.installUpdate() : api.checkUpdates());
+  }
+
   // --- Navigation ---------------------------------------------------------------------
 
   function goTo(next) {
@@ -474,6 +487,8 @@
     renderKnownGames();
     renderCustomGames();
     renderHotkeys();
+    renderUpdate(data.update);
+    api.onUpdateStatus(renderUpdate);
     bindEvents();
     goTo(0);
   }
