@@ -23,7 +23,7 @@ const { createStore } = require('./store');
 const { listProcesses } = require('./process-list');
 const { startGsiServer } = require('./gsi-server');
 const { installIntegration, integrationStatus } = require('./gsi-install');
-const { LEVELS, EQUIPMENT, FREQUENCIES, MUSCLE_GROUPS } = require('../core/catalog');
+const { LEVELS, EQUIPMENT, FREQUENCIES, MUSCLE_GROUPS, FOCUS_AREAS } = require('../core/catalog');
 const { EXERCISES } = require('../core/exercises');
 const engine = require('../core/workout-engine');
 const { KNOWN_GAMES, customGamesToDefinitions, detectGame, selectableProcesses } = require('../core/games');
@@ -58,6 +58,7 @@ const hotkeyLabel = (id) => `${modifierLabel}+${HOTKEYS[id].key}`;
 const EDITABLE_KEYS = [
   'level',
   'equipment',
+  'focus',
   'minMinutesBetween',
   'useIdleDetection',
   'idleSeconds',
@@ -350,6 +351,33 @@ function createTray() {
   refreshTray(true);
 }
 
+function focusLabel(focus) {
+  if (focus.length === 0) return 'Hele kroppen';
+  return FOCUS_AREAS.filter((area) => focus.includes(area.id))
+    .map((area) => area.name)
+    .join(' + ');
+}
+
+// Skift fokus direkte fra bakkemenuen, fx "Bryst & skuldre" + "Arme" i dag.
+function setFocus(focus) {
+  settings = store.saveSettings({ ...settings, focus });
+  refreshTray(true);
+}
+
+function focusMenu() {
+  const focus = settings.focus;
+  return [
+    { label: 'Hele kroppen', type: 'checkbox', checked: focus.length === 0, click: () => setFocus([]) },
+    { type: 'separator' },
+    ...FOCUS_AREAS.map((area) => ({
+      label: area.name,
+      type: 'checkbox',
+      checked: focus.includes(area.id),
+      click: () => setFocus(focus.includes(area.id) ? focus.filter((id) => id !== area.id) : [...focus, area.id]),
+    })),
+  ];
+}
+
 function pauseExercises(until) {
   runCommands(coach.pauseUntil(until));
   refreshTray(true);
@@ -361,7 +389,7 @@ function refreshTray(force = false) {
   const status = statusText(now);
   const today = describeToday(todaySummary(store.history, now, EXERCISES));
   const paused = coach.snoozedUntil > now;
-  const key = `${status}|${today}|${paused}`;
+  const key = `${status}|${today}|${paused}|${settings.focus.join(',')}`;
   if (!force && key === trayKey) return;
   trayKey = key;
 
@@ -391,6 +419,7 @@ function refreshTray(force = false) {
               { label: 'Resten af dagen', click: () => pauseExercises(endOfToday(Date.now())) },
             ],
           },
+      { label: `Træn: ${focusLabel(settings.focus)}`, submenu: focusMenu() },
       { type: 'separator' },
       { label: 'Opsætning…', click: openSetup },
       { label: 'Afslut Workoutslop', click: () => app.quit() },
@@ -471,6 +500,7 @@ function setupData() {
       equipment: EQUIPMENT,
       frequencies: FREQUENCIES,
       levelExamples: levelExamples(),
+      focusAreas: FOCUS_AREAS.map(({ id, name, description }) => ({ id, name, description })),
       games: KNOWN_GAMES.map((g) => ({
         name: g.name,
         precise: Boolean(g.integration || g.matchProcesses),
@@ -509,9 +539,16 @@ function registerIpc() {
 
   ipcMain.handle('setup:get', (event) => (fromSetup(event) ? setupData() : null));
 
+  // Antal øvelser der passer til udkastet – i alt og for hvert fokusområde.
   ipcMain.handle('setup:count', (event, draft) => {
-    if (!fromSetup(event)) return 0;
-    return engine.availableExercises(EXERCISES, draftSettings(draft)).length;
+    if (!fromSetup(event)) return null;
+    const draftValues = draftSettings(draft);
+    const count = (focus) => engine.availableExercises(EXERCISES, { ...draftValues, focus }).length;
+    return {
+      total: count(draftValues.focus),
+      wholeBody: count([]),
+      byFocus: Object.fromEntries(FOCUS_AREAS.map((area) => [area.id, count([area.id])])),
+    };
   });
 
   ipcMain.handle('setup:processes', async (event) => {

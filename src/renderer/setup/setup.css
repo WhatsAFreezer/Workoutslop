@@ -182,6 +182,30 @@ code {
 .equip-grid {
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
 }
+.focus-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+.focus-figure {
+  display: block;
+  width: 100%;
+  height: 84px;
+  border-radius: 10px;
+  background: var(--fig-bg);
+}
+.focus-choice .choice-title {
+  margin-top: 4px;
+}
+.focus-choice .choice-mark {
+  top: 22px;
+  right: 22px;
+  background: var(--panel);
+}
+.choice-example.warn,
+.count .warn {
+  color: var(--warn);
+}
 
 .choice {
   position: relative;

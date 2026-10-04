@@ -84,6 +84,7 @@ test('indstillinger gøres gyldige', () => {
     customGames: [{ process: ' MyGame.exe ' }, { process: 'mygame.exe' }, { process: '' }],
     gsiToken: 'not-hex',
     integrationFiles: { cs2: 'C:\\cfg', evil: 'x' },
+    focus: ['arms', 'legs', 'arms', 'backPosture'],
   });
   assert.equal(s.level, 2);
   assert.deepEqual(s.equipment, ['dumbbells']);
@@ -93,5 +94,6 @@ test('indstillinger gøres gyldige', () => {
   assert.deepEqual(s.customGames, [{ name: 'MyGame', process: 'MyGame.exe' }]);
   assert.equal(s.gsiToken, '');
   assert.deepEqual(s.integrationFiles, { cs2: 'C:\\cfg' });
+  assert.deepEqual(s.focus, ['arms', 'backPosture']);
   assert.equal(s.setupComplete, false);
 });

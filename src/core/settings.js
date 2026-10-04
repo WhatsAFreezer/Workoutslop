@@ -1,12 +1,13 @@
 'use strict';
 
-const { LEVELS, EQUIPMENT, OVERLAY_POSITIONS } = require('./catalog');
+const { LEVELS, EQUIPMENT, FOCUS_AREAS, OVERLAY_POSITIONS } = require('./catalog');
 const { INTEGRATIONS } = require('./gsi');
 
 const DEFAULT_SETTINGS = {
   setupComplete: false,
   level: 2,
   equipment: [],
+  focus: [], // tom = hele kroppen
   minMinutesBetween: 10,
   useIdleDetection: true,
   idleSeconds: 25,
@@ -60,11 +61,13 @@ function normalizeCustomGames(list) {
 function normalizeSettings(raw = {}) {
   const d = DEFAULT_SETTINGS;
   const knownEquipment = new Set(EQUIPMENT.map((e) => e.id));
+  const knownFocus = new Set(FOCUS_AREAS.map((f) => f.id));
 
   return {
     setupComplete: Boolean(raw.setupComplete),
     level: LEVELS.some((l) => l.id === Number(raw.level)) ? Number(raw.level) : d.level,
     equipment: Array.isArray(raw.equipment) ? [...new Set(raw.equipment.filter((id) => knownEquipment.has(id)))] : [],
+    focus: Array.isArray(raw.focus) ? [...new Set(raw.focus.filter((id) => knownFocus.has(id)))] : [],
     minMinutesBetween: clampInt(raw.minMinutesBetween, 1, 120, d.minMinutesBetween),
     useIdleDetection: raw.useIdleDetection == null ? d.useIdleDetection : Boolean(raw.useIdleDetection),
     idleSeconds: clampInt(raw.idleSeconds, 10, 120, d.idleSeconds),

@@ -3,7 +3,7 @@
 
   const api = window.workoutslop.setup;
   const $ = (id) => document.getElementById(id);
-  const STEP_COUNT = 4;
+  const STEP_COUNT = 5;
 
   // Små ikoner til redskaberne (24×24).
   const EQUIPMENT_ICONS = {
@@ -13,6 +13,16 @@
     pullupBar: '<path d="M4 4v16M20 4v16M4 7h16M9.5 7v3.5M14.5 7v3.5"/><circle cx="12" cy="12.5" r="1.8"/>',
     resistanceBand:
       '<path d="M5 12c3-5 4 5 7 0s4 5 7 0"/><circle cx="3.5" cy="12" r="1.5"/><circle cx="20.5" cy="12" r="1.5"/>',
+    barbell: '<path d="M1.5 12h21M5.5 6.5v11M18.5 6.5v11M8 8.5v7M16 8.5v7"/>',
+  };
+
+  // Lille figur på hvert fokuskort: [animation, nøglepose].
+  const FOCUS_FIGURES = {
+    all: ['jumpingJack', 1],
+    chestShoulders: ['pushup', 0],
+    backPosture: ['pullup', 1],
+    legsAbs: ['squat', 1],
+    arms: ['bicepCurl', 1],
   };
   const CHECK_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>';
 
@@ -20,6 +30,7 @@
   let draft = null; // de indstillinger brugeren er ved at redigere
   let step = 0;
   let furthest = 0;
+  let counts = null; // antal øvelser der passer, fra hovedprocessen
 
   // Laver et element. Tekst sættes altid som tekst (ikke HTML), så brugerinput er sikkert.
   function el(tag, props = {}, children = []) {
@@ -113,11 +124,95 @@
   }
 
   async function updateCount() {
-    const count = await api.countExercises(draft);
-    $('exercise-count').replaceChildren(el('b', { text: `${count} øvelser` }), ' passer til dit niveau og dit udstyr.');
+    counts = await api.countExercises(draft);
+    $('exercise-count').replaceChildren(
+      el('b', { text: `${counts.wholeBody} øvelser` }),
+      ' passer til dit niveau og dit udstyr.',
+    );
+    renderFocus();
   }
 
-  // --- Trin 3: pauser -------------------------------------------------------------
+  // --- Trin 3: fokus --------------------------------------------------------------
+
+  function focusFigure(key) {
+    const [name, frame] = FOCUS_FIGURES[key];
+    const anim = window.ANIMATIONS[name];
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'focus-figure');
+    svg.setAttribute('aria-hidden', 'true');
+    window.Figure.renderFrame(svg, anim, window.Figure.keyframeTimes(anim)[frame]);
+    return svg;
+  }
+
+  function focusCountText(n) {
+    if (n == null) return '';
+    if (n === 0) return 'Ingen øvelser med dit udstyr';
+    return n === 1 ? '1 øvelse med dit udstyr' : `${n} øvelser med dit udstyr`;
+  }
+
+  function renderFocus() {
+    const wholeBody = draft.focus.length === 0;
+    const allCard = el(
+      'button',
+      {
+        type: 'button',
+        class: 'choice focus-choice',
+        'aria-pressed': String(wholeBody),
+        onclick: () => {
+          draft.focus = [];
+          renderFocus();
+          updateCount();
+        },
+      },
+      [
+        focusFigure('all'),
+        el('span', { class: 'choice-title', text: 'Hele kroppen' }),
+        el('span', { class: 'choice-text', text: 'Lidt af det hele – appen skifter selv mellem områderne.' }),
+        el('span', { class: 'choice-example', text: focusCountText(counts && counts.wholeBody) }),
+        el('span', { class: 'choice-mark', html: CHECK_ICON }),
+      ],
+    );
+
+    const areaCards = data.catalog.focusAreas.map((area) => {
+      const selected = draft.focus.includes(area.id);
+      const n = counts && counts.byFocus[area.id];
+      return el(
+        'button',
+        {
+          type: 'button',
+          class: 'choice focus-choice',
+          'aria-pressed': String(selected),
+          onclick: () => {
+            draft.focus = selected ? draft.focus.filter((id) => id !== area.id) : [...draft.focus, area.id];
+            renderFocus();
+            updateCount();
+          },
+        },
+        [
+          focusFigure(area.id),
+          el('span', { class: 'choice-title', text: area.name }),
+          el('span', { class: 'choice-text', text: area.description }),
+          el('span', { class: n === 0 ? 'choice-example warn' : 'choice-example', text: focusCountText(n) }),
+          el('span', { class: 'choice-mark', html: CHECK_ICON }),
+        ],
+      );
+    });
+    $('focus').replaceChildren(allCard, ...areaCards);
+
+    if (!counts) return;
+    const chosen = data.catalog.focusAreas.filter((area) => draft.focus.includes(area.id)).map((a) => a.name);
+    const label = chosen.length ? chosen.join(' + ') : 'hele kroppen';
+    $('focus-count').replaceChildren(
+      ...(counts.total === 0
+        ? [
+            el('b', { class: 'warn', text: 'Ingen øvelser passer. ' }),
+            'Vælg mere udstyr eller et andet fokus – indtil da får du øvelser til hele kroppen.',
+          ]
+        : [el('b', { text: `${counts.total} øvelser` }), ` til ${label}.`]),
+    );
+  }
+
+  // --- Trin 4: pauser -------------------------------------------------------------
 
   function renderFrequency() {
     $('frequency').replaceChildren(
@@ -161,7 +256,7 @@
     $('login-row').hidden = data.platform !== 'win32' && data.platform !== 'darwin';
   }
 
-  // --- Trin 4: spil -------------------------------------------------------------------
+  // --- Trin 5: spil -------------------------------------------------------------------
 
   function integrationText(status) {
     if (status.installed) return { text: 'Installeret – virker næste gang du starter spillet.', ok: true };

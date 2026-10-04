@@ -76,6 +76,9 @@ button {
   fill: var(--fig-prop);
   stroke: none;
 }
+.fig-board {
+  stroke-width: 7;
+}
 .fig-bar {
   fill: var(--fig-prop);
   stroke: none;

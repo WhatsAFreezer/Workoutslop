@@ -9,11 +9,13 @@ lang tid der er gået siden din sidste øvelse.
 
 ## Sådan bruges den
 
-1. **Start appen.** Første gang kommer en hurtig opsætning i fire trin. Den kan altid åbnes igen fra ikonet i
+1. **Start appen.** Første gang kommer en hurtig opsætning i fem trin. Den kan altid åbnes igen fra ikonet i
    systembakken (ved uret):
    - **Styrke** – Begynder, Let øvet, Øvet eller Stærk.
-   - **Udstyr** – håndvægte, kettlebell, træningsbænk, pull-up bar og/eller elastikker. Uden udstyr får du
-     kropsvægtsøvelser.
+   - **Udstyr** – håndvægte, kettlebell, træningsbænk, pull-up bar, elastikker og/eller vægtstang. Uden
+     udstyr får du kropsvægtsøvelser.
+   - **Fokus** – hvad du vil træne: Bryst & skuldre, Ryg/nakke & holdning, Ben & mave, Arme – eller en
+     kombination, fx Bryst & skuldre + Arme. Vælger du intet, får du hele kroppen.
    - **Pauser** – hvor ofte du vil træne, om inaktivitet skal tælle som pause, og hvilket hjørne overlayet
      skal vises i.
    - **Spil** – de spil appen kender, dine egne spil og den præcise integration til CS2 og Dota 2.
@@ -32,8 +34,8 @@ lang tid der er gået siden din sidste øvelse.
 | `Ctrl+Alt+D` | Markér øvelsen som færdig       |
 | `Ctrl+Alt+S` | Spring øvelsen over             |
 
-Fra bakkeikonet kan du også sætte motionen på pause (30 min, 1 time eller resten af dagen) og se, hvor mange
-øvelser du har lavet i dag.
+Fra bakkeikonet kan du også skifte fokus (**Træn: …**), sætte motionen på pause (30 min, 1 time eller resten
+af dagen) og se, hvor mange øvelser du har lavet i dag.
 
 > **Tip:** Kør spillet i **kantløst vindue** (borderless/windowed fullscreen). I "eksklusiv fuldskærm" kan
 > intet program vises ovenpå spillet.
@@ -83,7 +85,9 @@ vægsid, hæng i stangen) rundes til hele 5 sekunder og har en indbygget timer.
 
 ### 4. Hvilken øvelse?
 
-Kun øvelser, der passer til dit udstyr og dit niveau, kan vælges. For variationens skyld gøres det mindre
+Kun øvelser, der passer til dit udstyr, dit niveau og dit fokus, kan vælges. En øvelse kan høre til flere
+fokusområder – pull-ups tæller fx både som ryg og arme. Passer ingen øvelser til dit fokus med det udstyr, du
+har, får du en øvelse fra hele kroppen i stedet. For variationens skyld gøres det mindre
 sandsynligt at få samme øvelse som sidst, en øvelse fra den seneste time eller den samme muskelgruppe som
 sidst. Øvelser med dit eget udstyr bliver valgt lidt oftere.
 
@@ -96,8 +100,8 @@ at have et ikon i systembakken og at læse, hvor længe mus og tastatur har vær
 ```
 src/
   core/                    Logikken – ren JavaScript uden Electron, så den kan testes
-    catalog.js             Styrkeniveauer, udstyr, hyppigheder
-    exercises.js           Alle 31 øvelser med mængder, trin og tips
+    catalog.js             Styrkeniveauer, udstyr, fokusområder, muskelgrupper
+    exercises.js           Alle 44 øvelser med mængder, trin og tips
     workout-engine.js      Vælger øvelse og udregner antal gentagelser
     games.js               Kendte spil og genkendelse af kørende programmer
     gsi.js                 CS2/Dota 2 Game State Integration
@@ -112,7 +116,7 @@ src/
     process-list.js        Henter listen over kørende programmer
     store.js               Gemmer indstillinger og historik som JSON
   renderer/                Det brugeren ser
-    setup/                 Opsætningen (4 trin)
+    setup/                 Opsætningen (5 trin)
     overlay/               Overlayet med øvelsen
     shared/figure.js       Tegner og animerer tændstikmanden
     shared/animations.js   Bevægelserne til alle øvelser

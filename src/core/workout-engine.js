@@ -2,6 +2,8 @@
 
 // Vælger hvilken øvelse brugeren skal lave, og hvor meget.
 
+const { FOCUS_AREAS } = require('./catalog');
+
 const MINUTE = 60 * 1000;
 
 // Hvordan tiden siden sidste øvelse påvirker mængden: [minutter, faktor].
@@ -41,8 +43,21 @@ function baseAmount(exercise, level) {
   return exercise.amounts[level - 1] ?? null;
 }
 
-function availableExercises(exercises, { level, equipment }) {
-  return exercises.filter((ex) => hasEquipment(ex, equipment) && baseAmount(ex, level) != null);
+// De fokusområder en øvelse hører til, fx ['backPosture', 'arms'] for pull-ups.
+function focusAreasOf(exercise) {
+  const fromGroup = FOCUS_AREAS.filter((area) => area.groups.includes(exercise.muscleGroup)).map((area) => area.id);
+  return [...new Set([...fromGroup, ...(exercise.extraFocus || [])])];
+}
+
+// Intet fokus valgt = hele kroppen.
+function matchesFocus(exercise, focus) {
+  return !focus || focus.length === 0 || focusAreasOf(exercise).some((area) => focus.includes(area));
+}
+
+function availableExercises(exercises, { level, equipment, focus }) {
+  return exercises.filter(
+    (ex) => hasEquipment(ex, equipment) && baseAmount(ex, level) != null && matchesFocus(ex, focus),
+  );
 }
 
 function computeAmount(exercise, level, minutesSinceLast) {
@@ -66,7 +81,11 @@ function lastCompletedAt(history) {
 // Vægtet tilfældigt valg: øvelser man lige har lavet, eller som rammer samme
 // muskelgruppe som sidst, bliver mindre sandsynlige. Så får man variation.
 function chooseExercise({ exercises, settings, history, now, random = Math.random, exclude = [] }) {
-  const pool = availableExercises(exercises, settings).filter((ex) => !exclude.includes(ex.id));
+  let pool = availableExercises(exercises, settings).filter((ex) => !exclude.includes(ex.id));
+  // Passer intet til fokus + udstyr, er det bedre at foreslå noget andet end ingenting.
+  if (pool.length === 0) {
+    pool = availableExercises(exercises, { ...settings, focus: [] }).filter((ex) => !exclude.includes(ex.id));
+  }
   if (pool.length === 0) return null;
 
   const recent = history.filter((h) => now - h.at < 60 * MINUTE && h.status !== 'preview');
@@ -126,6 +145,8 @@ module.exports = {
   FRESH_START_MINUTES,
   timeFactor,
   hasEquipment,
+  focusAreasOf,
+  matchesFocus,
   availableExercises,
   computeAmount,
   lastCompletedAt,

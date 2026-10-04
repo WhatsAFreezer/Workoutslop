@@ -18,6 +18,20 @@
 
   const floor = { type: 'floor' };
 
+  const rad = (d) => (d * Math.PI) / 180;
+  const at = (p, angle, len) => [p[0] + Math.cos(rad(angle)) * len, p[1] + Math.sin(rad(angle)) * len];
+
+  // En flade parallelt med en kropsdel og lidt under den (skråbænk, preacher-pude).
+  function padUnder(start, angle, from, to, offset, legs) {
+    const normal = angle + 90;
+    return {
+      type: 'board',
+      from: at(at(start, angle, from), normal, offset),
+      to: at(at(start, angle, to), normal, offset),
+      legs,
+    };
+  }
+
   // Lige krop fra anklen og op i en given vinkel (armbøjninger, planke osv.).
   // Hoften drejer rundt om anklen, så benene forbliver strakte undervejs.
   function straightBody(ankle, angle) {
@@ -53,6 +67,28 @@
     leg2: { a: 96, b: 168 },
   };
   const pullTop = { ...hang, hip: [123.6, 52], head: -92 };
+
+  // Liggende på maven på en skråbænk (Y-løft, roning på skråbænk).
+  const PRONE_HIP = [100, 110];
+  const prone = { hip: PRONE_HIP, torso: -35, leg: { to: [54, 140], bend: -1 } };
+  const proneBench = padUnder(PRONE_HIP, -35, -22, 40, 7, [92, 130]);
+
+  // Siddende på en bænk med overarmen på en skrå pude (preacher curls).
+  const PREACHER_HIP = [92, 112];
+  const preacherPad = padUnder(at(PREACHER_HIP, -80, 46), 48, 2, 30, 6, [115]);
+
+  // Liggende på ryggen på en bænk med hovedet ud over kanten (nakkecurls).
+  const NECK_CURL_NECK = [132, 104];
+  const neckCurlPose = (headAngle) => {
+    const head = at(NECK_CURL_NECK, headAngle, 13);
+    return {
+      hip: [86, 104],
+      torso: 0,
+      head: headAngle,
+      arm: { to: at(head, headAngle - 70, 10), bend: -1 }, // hænderne holder vægten på panden
+      leg: { to: [56, F], bend: 1, foot: 0 },
+    };
+  };
 
   const curlDown = { ...standing(), arm: { a: 94, b: 94 }, arm2: { a: 86, b: 86 } };
   const curlUp = { ...standing(), arm: { a: 94, b: -60 }, arm2: { a: 86, b: -66 } };
@@ -561,6 +597,187 @@
       ],
       tempo: 900,
       holds: [150, 250],
+    },
+
+    chinTuck: {
+      view: 'side',
+      props: [floor, { type: 'bench', x: 78, w: 48, top: 116 }],
+      frames: [
+        // Fra "gamer-holdning" med hovedet skudt frem ...
+        { hip: [100, 112], torso: -80, head: -50, arm: { to: [126, 107], bend: 1 }, leg: { a: 0, b: 90 } },
+        // ... til rank ryg og hagen trukket bagud.
+        { hip: [100, 112], torso: -92, head: -112, arm: { to: [124, 107], bend: 1 }, leg: { a: 0, b: 90 } },
+      ],
+      tempo: 700,
+      holds: [300, 1400],
+    },
+
+    wallAngel: {
+      view: 'front',
+      props: [floor],
+      frames: [
+        {
+          hip: [120, 76],
+          torso: -90,
+          arm: { a: 180, b: -90 },
+          arm2: { a: 0, b: -90 },
+          leg: { a: 95, b: 93 },
+          leg2: { a: 85, b: 87 },
+        },
+        {
+          hip: [120, 76],
+          torso: -90,
+          arm: { a: -118, b: -108 },
+          arm2: { a: -62, b: -72 },
+          leg: { a: 95, b: 93 },
+          leg2: { a: 85, b: 87 },
+        },
+      ],
+      tempo: 1400,
+      hold: 200,
+    },
+
+    neckCurl: {
+      view: 'side',
+      props: [floor, { type: 'bench', x: 40, w: 98, top: 108 }, { type: 'dumbbell', on: 'hand0' }],
+      frames: [neckCurlPose(40), neckCurlPose(-55)],
+      tempo: 900,
+      holds: [150, 300],
+    },
+
+    neckExtension: {
+      view: 'side',
+      props: [floor, { type: 'bench', x: 50, w: 102, top: 108 }],
+      frames: [
+        {
+          hip: [110, 104],
+          torso: 0,
+          head: 65,
+          arm: { to: [148, 140], bend: 1 },
+          leg: { a: 180, b: 180, foot: 180 },
+        },
+        {
+          hip: [110, 104],
+          torso: 0,
+          head: -20,
+          arm: { to: [148, 140], bend: 1 },
+          leg: { a: 180, b: 180, foot: 180 },
+        },
+      ],
+      tempo: 900,
+      holds: [150, 300],
+    },
+
+    proneYRaise: {
+      view: 'side',
+      props: [floor, proneBench, { type: 'dumbbell', on: 'hand1', far: true }, { type: 'dumbbell', on: 'hand0' }],
+      frames: [
+        { ...prone, arm: { a: 92, b: 92 }, arm2: { a: 88, b: 88 } },
+        { ...prone, arm: { a: -35, b: -35 }, arm2: { a: -38, b: -38 } },
+      ],
+      tempo: 1000,
+      holds: [150, 400],
+    },
+
+    chestSupportedRow: {
+      view: 'side',
+      props: [floor, proneBench, { type: 'dumbbell', on: 'hand1', far: true }, { type: 'dumbbell', on: 'hand0' }],
+      frames: [
+        { ...prone, arm: { to: [136, 134], bend: 1 } },
+        { ...prone, arm: { to: [124, 98], bend: 1 } },
+      ],
+      tempo: 850,
+      holds: [150, 300],
+    },
+
+    preacherCurl: {
+      view: 'side',
+      props: [
+        floor,
+        { type: 'bench', x: 60, w: 54, top: 116 },
+        preacherPad,
+        { type: 'dumbbell', on: 'hand1', far: true },
+        { type: 'dumbbell', on: 'hand0' },
+      ],
+      frames: [
+        { hip: PREACHER_HIP, torso: -80, arm: { a: 48, b: 62 }, leg: { to: [128, F], bend: -1 } },
+        { hip: PREACHER_HIP, torso: -80, arm: { a: 48, b: -95 }, leg: { to: [128, F], bend: -1 } },
+      ],
+      tempo: 950,
+      holds: [150, 250],
+    },
+
+    barbellCurl: {
+      view: 'side',
+      props: [floor, { type: 'plate', on: 'hand0' }],
+      frames: [curlDown, curlUp],
+      tempo: 950,
+    },
+
+    barbellRow: {
+      view: 'side',
+      props: [floor, { type: 'plate', on: 'hand0' }],
+      frames: [
+        {
+          hip: [95, 84],
+          torso: -25,
+          arm: { to: [137, 118], bend: 1 },
+          leg: { to: [115, F], bend: -1 },
+          leg2: { to: [111, F], bend: -1 },
+        },
+        {
+          hip: [95, 84],
+          torso: -25,
+          arm: { to: [116, 92], bend: 1 },
+          leg: { to: [115, F], bend: -1 },
+          leg2: { to: [111, F], bend: -1 },
+        },
+      ],
+      tempo: 850,
+      holds: [150, 250],
+    },
+
+    overheadPress: {
+      view: 'side',
+      props: [floor, { type: 'plate', on: 'hand0' }],
+      frames: [
+        { ...standing(), arm: { to: [131, 30], bend: 1 } },
+        { ...standing(), arm: { to: [123, -20], bend: 1 } },
+      ],
+      tempo: 900,
+    },
+
+    romanianDeadlift: {
+      view: 'side',
+      props: [floor, { type: 'plate', on: 'hand0' }],
+      frames: [
+        {
+          hip: [120, 76],
+          torso: -90,
+          arm: { to: [124, 84], bend: 1 },
+          leg: { to: [122, F], bend: -1 },
+          leg2: { to: [118, F], bend: -1 },
+        },
+        {
+          hip: [96, 82],
+          torso: -20,
+          arm: { to: [137, 116], bend: 1 },
+          leg: { to: [122, F], bend: -1 },
+          leg2: { to: [118, F], bend: -1 },
+        },
+      ],
+      tempo: 1100,
+      holds: [150, 250],
+    },
+
+    barbellBenchPress: {
+      view: 'side',
+      props: [floor, { type: 'bench', x: 72, w: 100, top: 108 }, { type: 'plate', on: 'hand0' }],
+      frames: [
+        { hip: [96, 104], torso: 0, head: 0, arm: { to: [126, 98], bend: -1 }, leg: { to: [66, F], bend: 1, foot: 0 } },
+        { hip: [96, 104], torso: 0, head: 0, arm: { to: [142, 53], bend: -1 }, leg: { to: [66, F], bend: 1, foot: 0 } },
+      ],
+      tempo: 950,
     },
   };
 

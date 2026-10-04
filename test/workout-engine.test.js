@@ -131,3 +131,64 @@ test('alle øvelser har gyldige data', () => {
     assert.ok(ex.animation, ex.id);
   }
 });
+
+test('fokus: kun øvelser fra de valgte områder', () => {
+  const settings = { level: 3, equipment: ['dumbbells', 'bench', 'barbell'], focus: ['arms'] };
+  const ids = engine.availableExercises(EXERCISES, settings).map((e) => e.id);
+  assert.ok(ids.includes('bicepCurl'));
+  assert.ok(ids.includes('preacherCurl'));
+  assert.ok(ids.includes('pullup') === false); // kræver pull-up bar
+  assert.ok(!ids.includes('squat'));
+  assert.ok(!ids.includes('pushup'));
+
+  // Kombination: bryst & skuldre + arme.
+  const combo = engine
+    .availableExercises(EXERCISES, { ...settings, focus: ['chestShoulders', 'arms'] })
+    .map((e) => e.id);
+  assert.ok(combo.includes('pushup') && combo.includes('bicepCurl') && combo.includes('overheadPress'));
+  assert.ok(!combo.includes('squat') && !combo.includes('neckCurl'));
+
+  // Intet fokus = hele kroppen.
+  assert.ok(engine.availableExercises(EXERCISES, { ...settings, focus: [] }).length > combo.length);
+});
+
+test('fokus: øvelser kan høre til flere områder', () => {
+  assert.deepEqual(engine.focusAreasOf(byId('pullup')).sort(), ['arms', 'backPosture']);
+  assert.deepEqual(engine.focusAreasOf(byId('neckCurl')), ['backPosture']);
+  assert.deepEqual(engine.focusAreasOf(byId('romanianDeadlift')).sort(), ['backPosture', 'legsAbs']);
+  for (const ex of EXERCISES) assert.ok(engine.focusAreasOf(ex).length > 0, `${ex.id} har intet fokusområde`);
+});
+
+test('fokus: hvert område har øvelser uden udstyr på alle niveauer', () => {
+  const { FOCUS_AREAS } = require('../src/core/catalog');
+  for (const area of FOCUS_AREAS) {
+    for (const level of [1, 2, 3, 4]) {
+      const n = engine.availableExercises(EXERCISES, { level, equipment: [], focus: [area.id] }).length;
+      assert.ok(n > 0, `${area.name}, niveau ${level}`);
+    }
+  }
+});
+
+test('fokus: passer intet, foreslås noget fra hele kroppen i stedet', () => {
+  const settings = { level: 1, equipment: [], focus: ['arms'] };
+  const exclude = engine.availableExercises(EXERCISES, settings).map((e) => e.id);
+  const ex = engine.chooseExercise({ exercises: EXERCISES, settings, history: [], now: 0, exclude });
+  assert.ok(ex);
+  assert.ok(!exclude.includes(ex.id));
+});
+
+test('nakke, holdning, preacher curls og vægtstang', () => {
+  const benchAndWeights = { level: 2, equipment: ['bench', 'dumbbells'], focus: ['backPosture'] };
+  const ids = engine.availableExercises(EXERCISES, benchAndWeights).map((e) => e.id);
+  for (const id of ['neckCurl', 'neckExtension', 'proneYRaise', 'chestSupportedRow', 'chinTuck', 'wallAngel']) {
+    assert.ok(ids.includes(id), id);
+  }
+  assert.ok(!engine.hasEquipment(byId('neckCurl'), ['bench']));
+  assert.ok(engine.hasEquipment(byId('neckCurl'), ['bench', 'barbell']));
+  assert.ok(engine.hasEquipment(byId('preacherCurl'), ['bench', 'barbell']));
+  assert.ok(!engine.hasEquipment(byId('preacherCurl'), ['dumbbells']));
+  const barbellOnly = engine.availableExercises(EXERCISES, { level: 3, equipment: ['barbell'] }).map((e) => e.id);
+  for (const id of ['barbellCurl', 'barbellRow', 'overheadPress', 'romanianDeadlift']) {
+    assert.ok(barbellOnly.includes(id), id);
+  }
+});

@@ -16,6 +16,7 @@ const EQUIPMENT = [
   { id: 'bench', name: 'Træningsbænk', description: 'Eller en stabil stol/kasse uden hjul.' },
   { id: 'pullupBar', name: 'Pull-up bar', description: 'I dørkarmen eller på væggen.' },
   { id: 'resistanceBand', name: 'Elastikker', description: 'Træningselastik / modstandsbånd.' },
+  { id: 'barbell', name: 'Vægtstang (bar)', description: 'Stang med vægtskiver til curls, roning og pres.' },
 ];
 
 // Hvor ofte brugeren højst vil have en øvelse.
@@ -26,14 +27,49 @@ const FREQUENCIES = [
   { minutes: 30, name: 'Sjældent', description: 'Højst hver halve time' },
 ];
 
+// Muskelgruppen vises på overlayet og bruges til at give variation.
 const MUSCLE_GROUPS = {
-  push: 'Bryst, skuldre & triceps',
-  pull: 'Ryg & biceps',
+  chest: 'Bryst, skuldre & triceps',
+  shoulders: 'Skuldre',
+  back: 'Ryg',
+  posture: 'Holdning & øvre ryg',
+  neck: 'Nakke',
+  biceps: 'Biceps',
+  triceps: 'Triceps',
   legs: 'Ben & balder',
   core: 'Mave & core',
   cardio: 'Kondition',
 };
 
+// Det brugeren kan vælge at træne. Flere kan kombineres, fx "Bryst & skuldre" + "Arme".
+// En øvelse hører til et område via sin muskelgruppe (groups) eller via `extraFocus`.
+const FOCUS_AREAS = [
+  {
+    id: 'chestShoulders',
+    name: 'Bryst & skuldre',
+    description: 'Armbøjninger, bænkpres, skulderpres og sideløft.',
+    groups: ['chest', 'shoulders'],
+  },
+  {
+    id: 'backPosture',
+    name: 'Ryg, nakke & holdning',
+    description: 'Roning, pull-ups, nakkeøvelser og øvelser mod "gamer-holdning".',
+    groups: ['back', 'posture', 'neck'],
+  },
+  {
+    id: 'legsAbs',
+    name: 'Ben & mave',
+    description: 'Squats, udfald, planke, mavebøjninger og kondition.',
+    groups: ['legs', 'core', 'cardio'],
+  },
+  {
+    id: 'arms',
+    name: 'Arme',
+    description: 'Biceps curls, preacher curls, dips og triceps.',
+    groups: ['biceps', 'triceps'],
+  },
+];
+
 const OVERLAY_POSITIONS = ['top-right', 'top-left', 'bottom-right', 'bottom-left'];
 
-module.exports = { LEVELS, EQUIPMENT, FREQUENCIES, MUSCLE_GROUPS, OVERLAY_POSITIONS };
+module.exports = { LEVELS, EQUIPMENT, FREQUENCIES, MUSCLE_GROUPS, FOCUS_AREAS, OVERLAY_POSITIONS };

@@ -38,12 +38,17 @@
             </li>
             <li>
               <button type="button" data-step="2">
-                <span class="num">3</span><span><b>Pauser</b><small>Hvornår og hvor</small></span>
+                <span class="num">3</span><span><b>Fokus</b><small>Hvad du vil træne</small></span>
               </button>
             </li>
             <li>
               <button type="button" data-step="3">
-                <span class="num">4</span><span><b>Spil</b><small>Hvad du spiller</small></span>
+                <span class="num">4</span><span><b>Pauser</b><small>Hvornår og hvor</small></span>
+              </button>
+            </li>
+            <li>
+              <button type="button" data-step="4">
+                <span class="num">5</span><span><b>Spil</b><small>Hvad du spiller</small></span>
               </button>
             </li>
           </ol>
@@ -56,7 +61,7 @@
         <div class="scroll">
           <!-- Trin 1 -->
           <section class="step" data-step="0">
-            <p class="eyebrow">Trin 1 af 4</p>
+            <p class="eyebrow">Trin 1 af 5</p>
             <h1>Hvor stærk er du?</h1>
             <p class="lead">Dit niveau bestemmer, hvor mange gentagelser du får. Du kan altid ændre det senere.</p>
             <div class="level-grid" id="levels" role="radiogroup" aria-label="Styrkeniveau"></div>
@@ -64,7 +69,7 @@
 
           <!-- Trin 2 -->
           <section class="step" data-step="1" hidden>
-            <p class="eyebrow">Trin 2 af 4</p>
+            <p class="eyebrow">Trin 2 af 5</p>
             <h1>Hvilke redskaber har du?</h1>
             <p class="lead">
               Vælg det, du har ved computeren. Uden redskaber får du kropsvægtsøvelser som armbøjninger, squats og
@@ -76,7 +81,19 @@
 
           <!-- Trin 3 -->
           <section class="step" data-step="2" hidden>
-            <p class="eyebrow">Trin 3 af 4</p>
+            <p class="eyebrow">Trin 3 af 5</p>
+            <h1>Hvad vil du træne?</h1>
+            <p class="lead">
+              Vælg ét eller flere områder – fx <b>Bryst &amp; skuldre</b> + <b>Arme</b>. Du kan også skifte fokus fra
+              ikonet i systembakken, når du sætter dig til at spille.
+            </p>
+            <div class="focus-grid" id="focus"></div>
+            <p class="count" id="focus-count"></p>
+          </section>
+
+          <!-- Trin 4 -->
+          <section class="step" data-step="3" hidden>
+            <p class="eyebrow">Trin 4 af 5</p>
             <h1>Hvornår skal du træne?</h1>
             <p class="lead">Workoutslop foreslår kun øvelser, når der er en pause i spillet – fx mellem to kampe.</p>
 
@@ -140,9 +157,9 @@
             </div>
           </section>
 
-          <!-- Trin 4 -->
-          <section class="step" data-step="3" hidden>
-            <p class="eyebrow">Trin 4 af 4</p>
+          <!-- Trin 5 -->
+          <section class="step" data-step="4" hidden>
+            <p class="eyebrow">Trin 5 af 5</p>
             <h1>Dine spil</h1>
             <p class="lead">Workoutslop opdager selv, når du starter et spil, og holder øje med pauserne.</p>
 
@@ -202,6 +219,8 @@
       </main>
     </div>
 
+    <script src="../shared/figure.js"></script>
+    <script src="../shared/animations.js"></script>
     <script src="setup.js"></script>
   </body>
 </html>

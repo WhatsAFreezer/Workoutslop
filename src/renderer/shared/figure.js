@@ -199,6 +199,27 @@
           `<circle cx="${f(c[0])}" cy="${f(c[1])}" r="8"/></g>`
         );
       }
+      case 'plate': {
+        // Vægtstang set fra siden: vægtskiven ved hænderne.
+        const [x, y] = pointRef(s, prop.on || 'hand0');
+        return (
+          `<g class="fig-weight"><circle cx="${f(x)}" cy="${f(y)}" r="11"/>` +
+          `<circle class="fig-weight-hole" cx="${f(x)}" cy="${f(y)}" r="2.6"/></g>`
+        );
+      }
+      case 'board': {
+        // Skrå flade (skråbænk, preacher-pude) med ben ned til gulvet.
+        const [x1, y1] = prop.from;
+        const [x2, y2] = prop.to;
+        const yAt = (x) => y1 + ((x - x1) / (x2 - x1)) * (y2 - y1);
+        const legs = (prop.legs || [])
+          .map((x) => `<line x1="${f(x)}" y1="${f(yAt(x))}" x2="${f(x)}" y2="${FLOOR_Y}"/>`)
+          .join('');
+        return (
+          `<g class="fig-prop"><line class="fig-board" x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}"/>` +
+          `${legs}</g>`
+        );
+      }
       case 'band': {
         const p = pointRef(s, prop.from);
         const q = pointRef(s, prop.to);
@@ -217,8 +238,9 @@
 
   function figureMarkup(anim, s) {
     const props = anim.props || [];
-    const behind = props.filter((p) => !['dumbbell', 'kettlebell', 'band'].includes(p.type));
-    const front = props.filter((p) => ['dumbbell', 'kettlebell', 'band'].includes(p.type) && !p.far);
+    const held = ['dumbbell', 'kettlebell', 'band', 'plate'];
+    const behind = props.filter((p) => !held.includes(p.type));
+    const front = props.filter((p) => held.includes(p.type) && !p.far);
     const farProps = props.filter((p) => p.far);
     const side = s.view === 'side';
     const farCls = side ? 'fig-limb fig-far' : 'fig-limb';
@@ -292,6 +314,7 @@
       minY = Math.min(minY, p[1] - r);
       maxY = Math.max(maxY, p[1] + r);
     };
+    const handRoom = (anim.props || []).some((p) => p.type === 'plate') ? 12 : 8;
     const { total } = timing(anim);
     const steps = anim.frames.length === 1 ? 1 : 60;
     for (let i = 0; i < steps; i++) {
@@ -301,7 +324,7 @@
       include(s.neck);
       for (const arm of s.arms) {
         include(arm.joint);
-        include(arm.end, 8); // plads til håndvægte
+        include(arm.end, handRoom); // plads til håndvægte og vægtskiver
       }
       for (const leg of s.legs) {
         include(leg.joint);
@@ -314,6 +337,10 @@
       if (prop.type === 'bench') {
         include([prop.x, prop.top]);
         include([prop.x + prop.w, FLOOR_Y]);
+      } else if (prop.type === 'board') {
+        include(prop.from);
+        include(prop.to);
+        if (prop.legs && prop.legs.length) include([prop.legs[0], FLOOR_Y]);
       } else if (prop.type === 'bar') {
         include(prop.at, 8);
       }
