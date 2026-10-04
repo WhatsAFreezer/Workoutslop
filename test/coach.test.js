@@ -14,8 +14,8 @@ function makeCoach() {
   let n = 0;
   const calls = [];
   const coach = new Coach({
-    suggest: (now, exclude, override) => {
-      calls.push({ exclude, override });
+    suggest: (now, exclude, override, options) => {
+      calls.push({ exclude, override, options });
       n++;
       return { exercise: { id: `ex${n}`, muscleGroup: 'push' }, amount: 10, minutesSinceLast: null };
     },
@@ -82,8 +82,9 @@ test('ved inaktivitets-pauser gøres overlayet først lille efter et stykke tids
 });
 
 test('øvelser man selv beder om bliver stående', () => {
-  const { coach } = makeCoach();
+  const { coach, calls } = makeCoach();
   assert.deepEqual(types(coach.requestNow(0)), ['show']);
+  assert.deepEqual(calls[0].options, { ignoreTargets: true });
   assert.equal(coach.current.trigger, 'manual');
   assert.deepEqual(coach.tick({ now: 1000, pause: playing(), idleSeconds: 0, settings }), []);
   assert.deepEqual(coach.tick({ now: 10 * MINUTE, pause: playing('idle'), idleSeconds: 0, settings }), []);

@@ -43,12 +43,17 @@
             </li>
             <li>
               <button type="button" data-step="3">
-                <span class="num">4</span><span><b>Pauser</b><small>Hvornår og hvor</small></span>
+                <span class="num">4</span><span><b>Øvelser</b><small>Øvelser og sæt</small></span>
               </button>
             </li>
             <li>
               <button type="button" data-step="4">
-                <span class="num">5</span><span><b>Spil</b><small>Hvad du spiller</small></span>
+                <span class="num">5</span><span><b>Pauser</b><small>Hvornår og hvor</small></span>
+              </button>
+            </li>
+            <li>
+              <button type="button" data-step="5">
+                <span class="num">6</span><span><b>Spil</b><small>Hvad du spiller</small></span>
               </button>
             </li>
           </ol>
@@ -68,7 +73,7 @@
         <div class="scroll">
           <!-- Trin 1 -->
           <section class="step" data-step="0">
-            <p class="eyebrow">Trin 1 af 5</p>
+            <p class="eyebrow">Trin 1 af 6</p>
             <h1>Hvor stærk er du?</h1>
             <p class="lead">Dit niveau bestemmer, hvor mange gentagelser du får. Du kan altid ændre det senere.</p>
             <div class="level-grid" id="levels" role="radiogroup" aria-label="Styrkeniveau"></div>
@@ -76,7 +81,7 @@
 
           <!-- Trin 2 -->
           <section class="step" data-step="1" hidden>
-            <p class="eyebrow">Trin 2 af 5</p>
+            <p class="eyebrow">Trin 2 af 6</p>
             <h1>Hvilke redskaber har du?</h1>
             <p class="lead">
               Vælg det, du har ved computeren. Uden redskaber får du kropsvægtsøvelser som armbøjninger, squats og
@@ -88,7 +93,7 @@
 
           <!-- Trin 3 -->
           <section class="step" data-step="2" hidden>
-            <p class="eyebrow">Trin 3 af 5</p>
+            <p class="eyebrow">Trin 3 af 6</p>
             <h1>Hvad vil du træne?</h1>
             <p class="lead">
               Vælg ét eller flere områder – fx <b>Bryst &amp; skuldre</b> + <b>Arme</b>. Du kan også skifte fokus fra
@@ -100,7 +105,19 @@
 
           <!-- Trin 4 -->
           <section class="step" data-step="3" hidden>
-            <p class="eyebrow">Trin 4 af 5</p>
+            <p class="eyebrow">Trin 4 af 6</p>
+            <h1>Øvelser og sæt</h1>
+            <p class="lead">
+              Vælg hvor mange sæt hver muskelgruppe skal have om dagen, og hvilke øvelser du vil have. Sættene fordeles
+              over de øvelser, du har valgt. Når dagens sæt er lavet, holder Workoutslop fri til i morgen.
+            </p>
+            <p class="count" id="plan-summary"></p>
+            <div class="muscle-list" id="muscles"></div>
+          </section>
+
+          <!-- Trin 5 -->
+          <section class="step" data-step="4" hidden>
+            <p class="eyebrow">Trin 5 af 6</p>
             <h1>Hvornår skal du træne?</h1>
             <p class="lead">Workoutslop foreslår kun øvelser, når der er en pause i spillet – fx mellem to kampe.</p>
 
@@ -117,9 +134,10 @@
                 <div>
                   <h2>Find pauser ud fra inaktivitet</h2>
                   <p class="hint">
-                    Når du ikke har rørt mus og tastatur et stykke tid, mens spillet kører (kø, loadingskærm, mellem
-                    kampe). Slå det fra, hvis du spiller med controller.
+                    Når du ikke har rørt mus, tastatur eller controller et stykke tid, mens spillet kører (kø,
+                    loadingskærm, mellem kampe).
                   </p>
+                  <p class="hint" id="controller-hint"></p>
                 </div>
                 <label class="switch"><input type="checkbox" id="idle-toggle" /><span></span></label>
               </div>
@@ -140,9 +158,22 @@
                   <button type="button" data-corner="bottom-right" aria-label="Nederst til højre"></button>
                 </div>
                 <p class="hint">
-                  Vælg et hjørne, hvor overlayet ikke dækker noget vigtigt. Spillet skal køre i
-                  <b>kantløst vindue</b> (borderless), for at overlayet kan ses ovenpå.
+                  Vælg et hjørne, hvor overlayet ikke dækker noget vigtigt. Overlayet kan ses over spil i
+                  <b>kantløst vindue</b> (borderless). I eksklusiv fuldskærm læses øvelsen højt i stedet.
                 </p>
+              </div>
+            </div>
+
+            <div class="field">
+              <h2>Læs øvelsen højt</h2>
+              <div class="segmented" id="speak" role="radiogroup" aria-label="Læs øvelsen højt"></div>
+              <p class="hint">
+                I <b>eksklusiv fuldskærm</b> kan intet vindue vises ovenpå spillet. Så læser Workoutslop øvelsen højt i
+                stedet – tryk <span id="speak-hotkey"></span>, når du er færdig.
+              </p>
+              <div class="speak-test">
+                <button type="button" class="btn small" id="speak-test">Prøv oplæsning</button>
+                <span class="hint" id="speak-status"></span>
               </div>
             </div>
 
@@ -164,9 +195,9 @@
             </div>
           </section>
 
-          <!-- Trin 5 -->
-          <section class="step" data-step="4" hidden>
-            <p class="eyebrow">Trin 5 af 5</p>
+          <!-- Trin 6 -->
+          <section class="step" data-step="5" hidden>
+            <p class="eyebrow">Trin 6 af 6</p>
             <h1>Dine spil</h1>
             <p class="lead">Workoutslop opdager selv, når du starter et spil, og holder øje med pauserne.</p>
 
@@ -228,6 +259,7 @@
 
     <script src="../shared/figure.js"></script>
     <script src="../shared/animations.js"></script>
+    <script src="../shared/speech.js"></script>
     <script src="setup.js"></script>
   </body>
 </html>

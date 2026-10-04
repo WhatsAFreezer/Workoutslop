@@ -24,7 +24,7 @@ const { listProcesses } = require('./process-list');
 const { startGsiServer } = require('./gsi-server');
 const { installIntegration, integrationStatus } = require('./gsi-install');
 const { createUpdater, describeUpdate } = require('./updater');
-const { LEVELS, EQUIPMENT, FREQUENCIES, MUSCLE_GROUPS, FOCUS_AREAS } = require('../core/catalog');
+const { LEVELS, EQUIPMENT, FREQUENCIES, MUSCLE_GROUPS, FOCUS_AREAS, MAX_SETS_PER_DAY } = require('../core/catalog');
 const { EXERCISES } = require('../core/exercises');
 const engine = require('../core/workout-engine');
 const { KNOWN_GAMES, customGamesToDefinitions, detectGame, selectableProcesses } = require('../core/games');
@@ -33,6 +33,8 @@ const { normalizeSettings } = require('../core/settings');
 const { PauseDetector } = require('../core/pause-detector');
 const { Coach } = require('../core/coach');
 const { todaySummary, describeToday } = require('../core/stats');
+const { GamepadActivity } = require('../core/gamepad-activity');
+const windowsNative = require('./windows-native');
 
 const ROOT = path.join(__dirname, '..', '..');
 const RENDERER = path.join(__dirname, '..', 'renderer');
@@ -60,12 +62,15 @@ const EDITABLE_KEYS = [
   'level',
   'equipment',
   'focus',
+  'disabledExercises',
+  'setsPerDay',
   'minMinutesBetween',
   'useIdleDetection',
   'idleSeconds',
   'customGames',
   'overlayPosition',
   'sound',
+  'speak',
   'openAtLogin',
 ];
 
@@ -96,14 +101,16 @@ let updater = null;
 let notifiedUpdateVersion = null;
 
 const pauseDetector = new PauseDetector();
+const gamepads = new GamepadActivity();
 const coach = new Coach({
-  suggest: (now, exclude, override) =>
+  suggest: (now, exclude, override, options = {}) =>
     engine.createSuggestion({
       exercises: EXERCISES,
       settings: override || settings,
       history: store.history,
       now,
       exclude,
+      ignoreTargets: options.ignoreTargets,
     }),
 });
 
@@ -136,7 +143,8 @@ function tick() {
   const now = Date.now();
   if (now - lastScanAt >= PROCESS_SCAN_MS) scanProcesses();
 
-  const idleSeconds = powerMonitor.getSystemIdleTime();
+  // Windows tæller ikke controller-input som aktivitet, så vi bruger det korteste af de to.
+  const idleSeconds = Math.min(powerMonitor.getSystemIdleTime(), gamepads.idleSeconds(now));
   const game = detected?.game ?? null;
   lastPause = pauseDetector.update({
     now,
@@ -150,6 +158,22 @@ function tick() {
 
   runCommands(coach.tick({ now, pause: lastPause, idleSeconds, settings }));
   refreshTray();
+}
+
+// Aflæser Xbox-kompatible controllere flere gange i sekundet (kun Windows).
+// Ikke-tilsluttede pladser tjekkes sjældnere, fordi det er langsomt i XInput.
+function startGamepadPolling() {
+  if (!windowsNative.capabilities().gamepads) return;
+  const nextCheck = new Array(windowsNative.XUSER_MAX_COUNT).fill(0);
+  setInterval(() => {
+    const now = Date.now();
+    for (let i = 0; i < windowsNative.XUSER_MAX_COUNT; i++) {
+      if (now < nextCheck[i]) continue;
+      const state = windowsNative.readGamepad(i);
+      gamepads.update(i, state, now);
+      nextCheck[i] = state ? 0 : now + 3000;
+    }
+  }, 250);
 }
 
 function startGsi() {
@@ -265,6 +289,28 @@ function contextLabel(current) {
   return current.gameName ? `Pause · ${current.gameName}` : 'Pause registreret';
 }
 
+// "sæt 2 af 3 i dag" for øvelsens muskelgruppe.
+function setProgressText(exercise, activeSettings) {
+  const group = engine.dailyPlan(EXERCISES, activeSettings, store.history, Date.now()).perGroup[exercise.muscleGroup];
+  if (!group || group.target === 0) return '';
+  return group.done < group.target ? `sæt ${group.done + 1} af ${group.target} i dag` : 'ekstra sæt';
+}
+
+// Læs øvelsen højt, hvis brugeren vil – eller hvis spillet kører i eksklusiv fuldskærm,
+// hvor overlayet ikke kan ses.
+function shouldSpeak(current) {
+  const mode = (current.settingsOverride || settings).speak;
+  if (mode === 'always') return true;
+  if (mode === 'never' || current.trigger === 'preview') return false;
+  return windowsNative.isExclusiveFullscreen() === true;
+}
+
+function todayText(now) {
+  const plan = engine.dailyPlan(EXERCISES, settings, store.history, now);
+  if (plan.hasTargets) return `${plan.done} af ${plan.target} sæt i dag`;
+  return describeToday(todaySummary(store.history, now, EXERCISES));
+}
+
 function overlayPayload(current, fresh) {
   const { suggestion } = current;
   const ex = suggestion.exercise;
@@ -286,10 +332,12 @@ function overlayPayload(current, fresh) {
     amount: suggestion.amount,
     unitLabel: engine.unitLabel(ex, suggestion.amount),
     sinceText: engine.describeTimeSince(suggestion.minutesSinceLast),
-    todayText: describeToday(todaySummary(store.history, Date.now(), EXERCISES)),
+    setText: setProgressText(ex, current.settingsOverride || settings),
     hotkeys: { done: hotkeyLabel('done'), hide: hotkeyLabel('hide') },
     snoozeMinutes: SNOOZE_MINUTES,
     sound: settings.sound,
+    speak: fresh && shouldSpeak(current),
+    speechText: `${ex.name}. ${suggestion.amount} ${engine.unitLabel(ex, suggestion.amount)}. Tryk kontrol, alt, D, når du er færdig.`,
   };
 }
 
@@ -335,6 +383,7 @@ function endOfToday(now) {
 
 function statusText(now) {
   if (coach.snoozedUntil > now) return `Sat på pause til kl. ${formatClock(coach.snoozedUntil)}`;
+  if (engine.dailyPlan(EXERCISES, settings, store.history, now).complete) return 'Dagens sæt er klaret – godt gået!';
   const p = lastPause;
   if (p.state === 'noGame') return 'Venter på, at du starter et spil';
   const game = p.game?.name ?? 'Spil';
@@ -427,7 +476,7 @@ function refreshTray(force = false) {
   if (!tray) return;
   const now = Date.now();
   const status = statusText(now);
-  const today = describeToday(todaySummary(store.history, now, EXERCISES));
+  const today = todayText(now);
   const paused = coach.snoozedUntil > now;
   const update = updater.status();
   const key = `${status}|${today}|${paused}|${settings.focus.join(',')}|${update.state}|${update.percent}`;
@@ -552,6 +601,7 @@ function setupData() {
       integrations: Object.values(INTEGRATIONS).map((i) => ({ id: i.id, name: i.name, note: i.note })),
     },
     integrations: integrationStatuses(),
+    native: windowsNative.capabilities(),
     gsiError,
     hotkeys: Object.keys(HOTKEYS).map((id) => ({
       id,
@@ -595,6 +645,37 @@ function registerIpc() {
     };
   });
 
+  // Øvelser og sæt pr. muskelgruppe for udkastet (trinnet "Øvelser og sæt").
+  ipcMain.handle('setup:plan', (event, draft) => {
+    if (!fromSetup(event)) return null;
+    const draftValues = draftSettings(draft);
+    // Alle øvelser der passer til udstyr, niveau og fokus – også de fravalgte.
+    const candidates = engine.availableExercises(EXERCISES, {
+      ...draftValues,
+      disabledExercises: [],
+      setsPerDay: null,
+    });
+    const groups = Object.keys(MUSCLE_GROUPS)
+      .map((group) => ({
+        id: group,
+        name: MUSCLE_GROUPS[group],
+        sets: draftValues.setsPerDay[group],
+        exercises: candidates
+          .filter((ex) => ex.muscleGroup === group)
+          .map((ex) => {
+            const { amount } = engine.computeAmount(ex, draftValues.level, null);
+            return {
+              id: ex.id,
+              name: ex.name,
+              amount: engine.describeAmount(ex, amount),
+              enabled: !draftValues.disabledExercises.includes(ex.id),
+            };
+          }),
+      }))
+      .filter((group) => group.exercises.length > 0);
+    return { groups, maxSets: MAX_SETS_PER_DAY };
+  });
+
   ipcMain.handle('setup:processes', async (event) => {
     if (!fromSetup(event)) return [];
     return selectableProcesses(await listProcesses());
@@ -633,6 +714,7 @@ function registerIpc() {
       settings: override,
       history: store.history,
       now,
+      ignoreTargets: true,
     });
     runCommands(coach.present(now, suggestion, 'preview', null, override));
     return { ok: Boolean(suggestion) };
@@ -700,6 +782,7 @@ function start() {
   applyLoginItem();
   updater.start();
   scanProcesses();
+  startGamepadPolling();
   setInterval(tick, TICK_MS);
 
   if (!settings.setupComplete) openSetup();

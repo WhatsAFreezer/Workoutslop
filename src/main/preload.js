@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('workoutslop', {
   setup: {
     get: () => ipcRenderer.invoke('setup:get'),
     countExercises: (draft) => ipcRenderer.invoke('setup:count', draft),
+    plan: (draft) => ipcRenderer.invoke('setup:plan', draft),
     listProcesses: () => ipcRenderer.invoke('setup:processes'),
     installIntegration: (id) => ipcRenderer.invoke('setup:install-integration', id),
     preview: (draft) => ipcRenderer.invoke('setup:preview', draft),

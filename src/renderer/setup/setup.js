@@ -3,7 +3,7 @@
 
   const api = window.workoutslop.setup;
   const $ = (id) => document.getElementById(id);
-  const STEP_COUNT = 5;
+  const STEP_COUNT = 6;
 
   // Små ikoner til redskaberne (24×24).
   const EQUIPMENT_ICONS = {
@@ -130,6 +130,7 @@
       ' passer til dit niveau og dit udstyr.',
     );
     renderFocus();
+    renderPlan();
   }
 
   // --- Trin 3: fokus --------------------------------------------------------------
@@ -212,7 +213,132 @@
     );
   }
 
-  // --- Trin 4: pauser -------------------------------------------------------------
+  // --- Trin 4: øvelser og sæt -----------------------------------------------------
+
+  const setsLabel = (n) => (n === 0 ? 'Trænes ikke' : n === 1 ? '1 sæt/dag' : `${n} sæt/dag`);
+
+  async function renderPlan() {
+    const plan = await api.plan(draft);
+    if (!plan) return;
+
+    let totalSets = 0;
+    let totalExercises = 0;
+    const cards = plan.groups.map((group) => {
+      const enabled = group.exercises.filter((ex) => ex.enabled);
+      const active = group.sets > 0 && enabled.length > 0;
+      if (active) {
+        totalSets += group.sets;
+        totalExercises += enabled.length;
+      }
+
+      const setSets = (n) => {
+        draft.setsPerDay[group.id] = n;
+        updateCount();
+      };
+      const stepper = el('div', { class: 'stepper' }, [
+        el('button', {
+          type: 'button',
+          text: '−',
+          'aria-label': `Færre sæt for ${group.name}`,
+          ...(group.sets <= 0 ? { disabled: '' } : {}),
+          onclick: () => setSets(group.sets - 1),
+        }),
+        el('output', { text: setsLabel(group.sets) }),
+        el('button', {
+          type: 'button',
+          text: '+',
+          'aria-label': `Flere sæt for ${group.name}`,
+          ...(group.sets >= plan.maxSets ? { disabled: '' } : {}),
+          onclick: () => setSets(group.sets + 1),
+        }),
+      ]);
+
+      let note = `${enabled.length} af ${group.exercises.length} øvelser valgt`;
+      let noteClass = '';
+      if (group.sets > 0 && enabled.length === 0) {
+        note = 'Vælg mindst én øvelse – ellers trænes muskelgruppen ikke.';
+        noteClass = 'warn';
+      }
+
+      const chips = group.exercises.map((ex) =>
+        el(
+          'button',
+          {
+            type: 'button',
+            class: 'exercise-chip',
+            'aria-pressed': String(ex.enabled),
+            title: ex.enabled ? 'Klik for at fravælge' : 'Klik for at vælge',
+            onclick: () => {
+              draft.disabledExercises = ex.enabled
+                ? [...draft.disabledExercises, ex.id]
+                : draft.disabledExercises.filter((id) => id !== ex.id);
+              updateCount();
+            },
+          },
+          [el('span', { class: 'tick', html: CHECK_ICON }), ex.name, el('small', { text: ex.amount })],
+        ),
+      );
+
+      return el('section', { class: group.sets > 0 ? 'muscle' : 'muscle off' }, [
+        el('div', { class: 'muscle-head' }, [
+          el('div', {}, [el('h2', { text: group.name }), el('small', { class: noteClass, text: note })]),
+          stepper,
+        ]),
+        group.sets > 0 ? el('div', { class: 'exercise-chips' }, chips) : null,
+      ]);
+    });
+
+    $('muscles').replaceChildren(...cards);
+    $('plan-summary').replaceChildren(
+      ...(totalSets === 0
+        ? [el('b', { class: 'warn', text: 'Ingen sæt valgt. ' }), 'Giv mindst én muskelgruppe nogle sæt.']
+        : [el('b', { text: `${totalSets} sæt om dagen` }), ` fordelt på ${totalExercises} øvelser.`]),
+    );
+  }
+
+  // --- Trin 5: pauser -------------------------------------------------------------
+
+  const SPEAK_OPTIONS = [
+    { id: 'never', name: 'Aldrig' },
+    { id: 'fullscreen', name: 'I fuldskærm', small: 'når overlayet ikke ses' },
+    { id: 'always', name: 'Altid' },
+  ];
+
+  function renderSpeak() {
+    $('speak').replaceChildren(
+      ...SPEAK_OPTIONS.map((option) =>
+        el(
+          'button',
+          {
+            type: 'button',
+            role: 'radio',
+            'aria-checked': String(draft.speak === option.id),
+            onclick: () => {
+              draft.speak = option.id;
+              renderSpeak();
+            },
+          },
+          [el('b', { text: option.name }), option.small ? el('small', { text: option.small }) : null],
+        ),
+      ),
+    );
+    const doneHotkey = data.hotkeys.find((h) => h.id === 'done');
+    $('speak-hotkey').textContent = doneHotkey ? doneHotkey.label : '';
+    $('controller-hint').textContent = data.native.gamepads
+      ? 'Xbox-kompatible controllere tæller også som aktivitet.'
+      : 'Controller-input kan kun aflæses på Windows. Spiller du med controller her, så slå inaktivitet fra.';
+  }
+
+  async function testSpeech() {
+    if (!window.Speech.supported) {
+      $('speak-status').textContent = 'Oplæsning understøttes ikke på denne computer.';
+      return;
+    }
+    const voice = await window.Speech.speak('Armbøjninger. 12 gentagelser. Tryk kontrol, alt, D, når du er færdig.');
+    $('speak-status').textContent = voice
+      ? `Stemme: ${voice}`
+      : 'Ingen dansk stemme fundet. Installér dansk tale under Windows-indstillinger › Tid og sprog › Tale.';
+  }
 
   function renderFrequency() {
     $('frequency').replaceChildren(
@@ -256,7 +382,7 @@
     $('login-row').hidden = data.platform !== 'win32' && data.platform !== 'darwin';
   }
 
-  // --- Trin 5: spil -------------------------------------------------------------------
+  // --- Trin 6: spil -------------------------------------------------------------------
 
   function integrationText(status) {
     if (status.installed) return { text: 'Installeret – virker næste gang du starter spillet.', ok: true };
@@ -464,6 +590,7 @@
       draft.openAtLogin = e.target.checked;
     });
 
+    $('speak-test').addEventListener('click', testSpeech);
     $('add-game').addEventListener('click', addCustomGame);
     $('custom-process').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') addCustomGame();
@@ -481,6 +608,7 @@
     updateCount();
     renderFrequency();
     renderIdle();
+    renderSpeak();
     renderCorners();
     renderToggles();
     renderIntegrations();

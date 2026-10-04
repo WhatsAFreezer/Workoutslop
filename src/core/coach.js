@@ -20,7 +20,8 @@ const DISMISS_COOLDOWN_MS = 5 * MINUTE;
 const ACTIVE_IDLE_SECONDS = 3;
 
 class Coach {
-  // suggest(now, excludeIds, settingsOverride) skal returnere et forslag eller null.
+  // suggest(now, excludeIds, settingsOverride, { ignoreTargets }) skal returnere et forslag eller null
+  // (null fx når dagens sæt er lavet).
   constructor({ suggest }) {
     this.suggest = suggest;
     this.current = null;
@@ -136,7 +137,8 @@ class Coach {
   reroll(now) {
     const c = this.current;
     if (!c) return [];
-    const next = this.suggest(now, [c.suggestion.exercise.id], c.settingsOverride);
+    const ignoreTargets = c.trigger !== 'pause';
+    const next = this.suggest(now, [c.suggestion.exercise.id], c.settingsOverride, { ignoreTargets });
     if (!next) return [];
     c.suggestion = next;
     c.mode = 'full';
@@ -160,7 +162,8 @@ class Coach {
     if (this.current) {
       return this.current.mode === 'compact' ? this.expand() : [{ type: 'show', current: this.current, fresh: false }];
     }
-    return this.present(now, this.suggest(now, []), 'manual');
+    // Beder man selv om en øvelse, får man en – også når dagens sæt er lavet.
+    return this.present(now, this.suggest(now, [], null, { ignoreTargets: true }), 'manual');
   }
 
   pauseUntil(timestamp) {

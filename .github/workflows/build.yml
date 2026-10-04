@@ -49,6 +49,8 @@ jobs:
           fi
 
       - run: npm ci
+      # Kører også testene af Windows-funktionerne (controller og fuldskærm).
+      - run: npm test
       - run: npm run dist
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'

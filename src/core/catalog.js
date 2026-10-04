@@ -42,6 +42,23 @@ const MUSCLE_GROUPS = {
   cardio: 'Kondition',
 };
 
+// Hvor mange sæt hver muskelgruppe som udgangspunkt skal have om dagen.
+// Brugeren kan ændre det i opsætningen (0 = træn ikke denne muskelgruppe).
+const DEFAULT_SETS_PER_DAY = {
+  chest: 3,
+  shoulders: 2,
+  back: 3,
+  posture: 2,
+  neck: 2,
+  biceps: 2,
+  triceps: 2,
+  forearms: 2,
+  legs: 4,
+  core: 3,
+  cardio: 2,
+};
+const MAX_SETS_PER_DAY = 10;
+
 // Det brugeren kan vælge at træne. Flere kan kombineres, fx "Bryst & skuldre" + "Arme".
 // En øvelse hører til et område via sin muskelgruppe (groups) eller via `extraFocus`.
 const FOCUS_AREAS = [
@@ -73,4 +90,13 @@ const FOCUS_AREAS = [
 
 const OVERLAY_POSITIONS = ['top-right', 'top-left', 'bottom-right', 'bottom-left'];
 
-module.exports = { LEVELS, EQUIPMENT, FREQUENCIES, MUSCLE_GROUPS, FOCUS_AREAS, OVERLAY_POSITIONS };
+module.exports = {
+  LEVELS,
+  EQUIPMENT,
+  FREQUENCIES,
+  MUSCLE_GROUPS,
+  DEFAULT_SETS_PER_DAY,
+  MAX_SETS_PER_DAY,
+  FOCUS_AREAS,
+  OVERLAY_POSITIONS,
+};

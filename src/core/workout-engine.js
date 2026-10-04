@@ -3,6 +3,7 @@
 // Vælger hvilken øvelse brugeren skal lave, og hvor meget.
 
 const { FOCUS_AREAS } = require('./catalog');
+const { startOfDay } = require('./stats');
 
 const MINUTE = 60 * 1000;
 
@@ -54,10 +55,59 @@ function matchesFocus(exercise, focus) {
   return !focus || focus.length === 0 || focusAreasOf(exercise).some((area) => focus.includes(area));
 }
 
-function availableExercises(exercises, { level, equipment, focus }) {
+// Antal sæt om dagen for en muskelgruppe – eller null, hvis der ikke er sat noget mål.
+function setsFor(settings, group) {
+  const sets = settings.setsPerDay;
+  return sets && sets[group] != null ? sets[group] : null;
+}
+
+// Fravalgte øvelser og muskelgrupper sat til 0 sæt er slået fra.
+function isEnabled(exercise, settings) {
+  return !(settings.disabledExercises || []).includes(exercise.id) && setsFor(settings, exercise.muscleGroup) !== 0;
+}
+
+function availableExercises(exercises, settings) {
+  const { level, equipment, focus } = settings;
   return exercises.filter(
-    (ex) => hasEquipment(ex, equipment) && baseAmount(ex, level) != null && matchesFocus(ex, focus),
+    (ex) =>
+      hasEquipment(ex, equipment) &&
+      baseAmount(ex, level) != null &&
+      matchesFocus(ex, focus) &&
+      isEnabled(ex, settings),
   );
+}
+
+// Gennemførte sæt i dag pr. muskelgruppe.
+function setsDoneToday(history, now) {
+  const from = startOfDay(now);
+  const done = {};
+  for (const entry of history) {
+    if (entry.status === 'done' && entry.at >= from && entry.at <= now) {
+      done[entry.muscleGroup] = (done[entry.muscleGroup] || 0) + 1;
+    }
+  }
+  return done;
+}
+
+// Dagens plan: hvor mange sæt hver muskelgruppe mangler. Kun muskelgrupper med
+// mindst én mulig øvelse tæller med – ellers kunne målet aldrig nås.
+function dailyPlan(exercises, settings, history, now) {
+  const done = setsDoneToday(history, now);
+  const groups = [...new Set(availableExercises(exercises, settings).map((ex) => ex.muscleGroup))];
+  const perGroup = {};
+  let target = 0;
+  let doneTotal = 0;
+  for (const group of groups) {
+    const sets = setsFor(settings, group);
+    if (sets == null) continue;
+    const d = done[group] || 0;
+    perGroup[group] = { done: d, target: sets, remaining: Math.max(0, sets - d) };
+    target += sets;
+    doneTotal += Math.min(d, sets);
+  }
+  const hasTargets = Object.keys(perGroup).length > 0;
+  const complete = hasTargets && Object.values(perGroup).every((g) => g.remaining === 0);
+  return { perGroup, target, done: doneTotal, hasTargets, complete };
 }
 
 function computeAmount(exercise, level, minutesSinceLast) {
@@ -80,13 +130,33 @@ function lastCompletedAt(history) {
 
 // Vægtet tilfældigt valg: øvelser man lige har lavet, eller som rammer samme
 // muskelgruppe som sidst, bliver mindre sandsynlige. Så får man variation.
-function chooseExercise({ exercises, settings, history, now, random = Math.random, exclude = [] }) {
+// ignoreTargets: brug ikke dagens mål (fx når brugeren selv beder om en øvelse).
+function chooseExercise({
+  exercises,
+  settings,
+  history,
+  now,
+  random = Math.random,
+  exclude = [],
+  ignoreTargets = false,
+}) {
+  let effective = settings;
   let pool = availableExercises(exercises, settings).filter((ex) => !exclude.includes(ex.id));
   // Passer intet til fokus + udstyr, er det bedre at foreslå noget andet end ingenting.
   if (pool.length === 0) {
-    pool = availableExercises(exercises, { ...settings, focus: [] }).filter((ex) => !exclude.includes(ex.id));
+    effective = { ...settings, focus: [] };
+    pool = availableExercises(exercises, effective).filter((ex) => !exclude.includes(ex.id));
   }
   if (pool.length === 0) return null;
+
+  // Dagens sæt: vælg kun blandt muskelgrupper, der mangler sæt. Er alle mål nået, er der fri.
+  const plan = dailyPlan(exercises, effective, history, now);
+  if (plan.hasTargets && !ignoreTargets) {
+    pool = pool.filter((ex) => (plan.perGroup[ex.muscleGroup]?.remaining ?? 1) > 0);
+    if (pool.length === 0) return null;
+  }
+  const from = startOfDay(now);
+  const doneToday = history.filter((h) => h.status === 'done' && h.at >= from);
 
   const recent = history.filter((h) => now - h.at < 60 * MINUTE && h.status !== 'preview');
   const last = recent.length > 0 ? recent[recent.length - 1] : null;
@@ -99,6 +169,11 @@ function chooseExercise({ exercises, settings, history, now, random = Math.rando
     w *= Math.pow(0.35, timesRecently);
     if (last && last.exerciseId === ex.id) w *= 0.1;
     if (last && last.muscleGroup === ex.muscleGroup) w *= 0.3;
+    // Muskelgrupper der mangler flest af dagens sæt kommer først.
+    const group = plan.perGroup[ex.muscleGroup];
+    if (group && group.target > 0) w *= 0.5 + group.remaining / group.target;
+    // Spred sættene ud på flere øvelser.
+    w *= Math.pow(0.5, doneToday.filter((h) => h.exerciseId === ex.id).length);
     return w;
   });
 
@@ -111,8 +186,8 @@ function chooseExercise({ exercises, settings, history, now, random = Math.rando
   return pool[pool.length - 1];
 }
 
-function createSuggestion({ exercises, settings, history, now, random, exclude }) {
-  const exercise = chooseExercise({ exercises, settings, history, now, random, exclude });
+function createSuggestion({ exercises, settings, history, now, random, exclude, ignoreTargets }) {
+  const exercise = chooseExercise({ exercises, settings, history, now, random, exclude, ignoreTargets });
   if (!exercise) return null;
   const lastDone = lastCompletedAt(history);
   const minutesSinceLast = Number.isFinite(lastDone) ? (now - lastDone) / MINUTE : null;
@@ -147,7 +222,11 @@ module.exports = {
   hasEquipment,
   focusAreasOf,
   matchesFocus,
+  setsFor,
+  isEnabled,
   availableExercises,
+  setsDoneToday,
+  dailyPlan,
   computeAmount,
   lastCompletedAt,
   chooseExercise,

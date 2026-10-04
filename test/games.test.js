@@ -85,6 +85,9 @@ test('indstillinger gøres gyldige', () => {
     gsiToken: 'not-hex',
     integrationFiles: { cs2: 'C:\\cfg', evil: 'x' },
     focus: ['arms', 'legs', 'arms', 'backPosture'],
+    disabledExercises: ['pushup', 'nope', 'pushup'],
+    setsPerDay: { chest: 99, legs: -2, core: 'x' },
+    speak: 'loud',
   });
   assert.equal(s.level, 2);
   assert.deepEqual(s.equipment, ['dumbbells']);
@@ -95,5 +98,11 @@ test('indstillinger gøres gyldige', () => {
   assert.equal(s.gsiToken, '');
   assert.deepEqual(s.integrationFiles, { cs2: 'C:\\cfg' });
   assert.deepEqual(s.focus, ['arms', 'backPosture']);
+  assert.deepEqual(s.disabledExercises, ['pushup']);
+  assert.equal(s.setsPerDay.chest, 10);
+  assert.equal(s.setsPerDay.legs, 0);
+  assert.equal(s.setsPerDay.core, 3);
+  assert.equal(s.setsPerDay.forearms, 2);
+  assert.equal(s.speak, 'fullscreen');
   assert.equal(s.setupComplete, false);
 });

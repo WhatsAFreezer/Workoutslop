@@ -207,3 +207,57 @@ test('arme inkluderer underarme', () => {
     .map((e) => e.id);
   assert.ok(bodyweight.includes('wristStretch'));
 });
+
+const MIN = 60 * 1000;
+const doneEntry = (at, exerciseId) => {
+  const ex = byId(exerciseId);
+  return { at, exerciseId, muscleGroup: ex.muscleGroup, amount: 10, unit: ex.unit, status: 'done' };
+};
+
+test('sæt pr. dag: dagens plan tæller gennemførte sæt pr. muskelgruppe', () => {
+  const now = new Date(2026, 9, 4, 20, 0).getTime();
+  const settings = { level: 2, equipment: [], focus: ['legsAbs'], setsPerDay: { legs: 2, core: 1, cardio: 0 } };
+  const yesterday = now - 24 * 60 * MIN;
+  const history = [
+    doneEntry(yesterday, 'squat'),
+    doneEntry(now - 30 * MIN, 'squat'),
+    doneEntry(now - 5 * MIN, 'plank'),
+  ];
+  const plan = engine.dailyPlan(EXERCISES, settings, history, now);
+  assert.deepEqual(plan.perGroup.legs, { done: 1, target: 2, remaining: 1 });
+  assert.deepEqual(plan.perGroup.core, { done: 1, target: 1, remaining: 0 });
+  assert.equal(plan.perGroup.cardio, undefined); // 0 sæt = trænes ikke
+  assert.equal(plan.target, 3);
+  assert.equal(plan.done, 2);
+  assert.equal(plan.complete, false);
+
+  // Kun ben mangler – så får man en benøvelse, og aldrig samme øvelse to gange hvis det kan undgås.
+  for (let i = 0; i < 50; i++) {
+    const ex = engine.chooseExercise({ exercises: EXERCISES, settings, history, now, random: () => i / 50 });
+    assert.equal(ex.muscleGroup, 'legs');
+  }
+});
+
+test('sæt pr. dag: når målet er nået, er der fri – medmindre man selv beder om en øvelse', () => {
+  const now = new Date(2026, 9, 4, 20, 0).getTime();
+  const settings = { level: 2, equipment: [], focus: ['legsAbs'], setsPerDay: { legs: 1, core: 1, cardio: 0 } };
+  const history = [doneEntry(now - 30 * MIN, 'squat'), doneEntry(now - 5 * MIN, 'plank')];
+  assert.equal(engine.dailyPlan(EXERCISES, settings, history, now).complete, true);
+  assert.equal(engine.createSuggestion({ exercises: EXERCISES, settings, history, now }), null);
+  assert.ok(engine.createSuggestion({ exercises: EXERCISES, settings, history, now, ignoreTargets: true }));
+});
+
+test('fravalgte øvelser og muskelgrupper med 0 sæt bruges ikke', () => {
+  const settings = {
+    level: 2,
+    equipment: ['dumbbells'],
+    focus: ['arms'],
+    disabledExercises: ['bicepCurl', 'diamondPushup'],
+    setsPerDay: { biceps: 2, triceps: 0, forearms: 2 },
+  };
+  const ids = engine.availableExercises(EXERCISES, settings).map((e) => e.id);
+  assert.ok(!ids.includes('bicepCurl'));
+  assert.ok(!ids.includes('diamondPushup'));
+  assert.ok(!ids.some((id) => byId(id).muscleGroup === 'triceps'));
+  assert.ok(ids.includes('hammerCurl'));
+});

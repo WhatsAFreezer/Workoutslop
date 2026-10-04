@@ -17,7 +17,8 @@
     "node": ">=20"
   },
   "dependencies": {
-    "electron-updater": "^6.8.9"
+    "electron-updater": "^6.8.9",
+    "koffi": "^2.16.3"
   },
   "devDependencies": {
     "electron": "^44.5.1",
@@ -32,13 +33,22 @@
     "files": [
       "src/**/*",
       "assets/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/koffi/{src,vendor,doc}/**"
     ],
+    "asarUnpack": [
+      "node_modules/koffi/build/**"
+    ],
+    "npmRebuild": false,
     "win": {
       "target": [
         "nsis"
       ],
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "files": [
+        "!node_modules/koffi/build/koffi/{darwin,freebsd,linux,musl,openbsd}_*/**",
+        "!node_modules/koffi/build/koffi/win32_{arm64,ia32}/**"
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -54,12 +64,18 @@
     "mac": {
       "target": "dmg",
       "category": "public.app-category.healthcare-fitness",
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "files": [
+        "!node_modules/koffi/build/koffi/{freebsd,linux,musl,openbsd,win32}_*/**"
+      ]
     },
     "linux": {
       "target": "AppImage",
       "category": "Game",
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "files": [
+        "!node_modules/koffi/build/koffi/{darwin,freebsd,musl,openbsd,win32}_*/**"
+      ]
     },
     "publish": [
       {

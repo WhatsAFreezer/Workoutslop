@@ -43,6 +43,7 @@
     $('name').textContent = ex.name;
     $('amount').textContent = next.amount;
     $('unit').textContent = next.unitLabel;
+    $('set-progress').textContent = next.setText || '';
 
     const steps = $('steps');
     steps.replaceChildren(
@@ -67,6 +68,8 @@
     $('done').classList.remove('ready');
     setMode(next.mode);
     if (next.fresh && next.sound) chime();
+    // Oplæsning – fx når spillet kører i eksklusiv fuldskærm og overlayet ikke kan ses.
+    if (next.speak) setTimeout(() => window.Speech.speak(next.speechText), next.sound ? 700 : 0);
   }
 
   // --- Timer til øvelser der måles i sekunder (planke, vægsid ...) -----------
