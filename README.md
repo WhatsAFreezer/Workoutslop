@@ -118,6 +118,8 @@ src/
     shared/animations.js   Bevægelserne til alle øvelser
 test/                      Automatiske tests (node --test)
 tools/gallery.html         Viser alle animationer – åbn filen i en browser
+assets/                    Ikoner til appen og systembakken
+.github/workflows/         Bygger Windows-programmet automatisk på GitHub
 ```
 
 Indstillinger og historik gemmes i `%APPDATA%\Workoutslop` på Windows (`~/Library/Application Support/Workoutslop`
@@ -146,6 +148,40 @@ WORKOUTSLOP_DATA_DIR=.workoutslop-data npm start
 ```
 
 (På Windows i PowerShell: `$env:WORKOUTSLOP_DATA_DIR=".workoutslop-data"; npm start`)
+
+## Byg et rigtigt program (.exe)
+
+### Lad GitHub bygge det (nemmest)
+
+Hver gang du pusher til GitHub, tester og bygger `.github/workflows/build.yml` appen på en Windows-maskine:
+
+1. Gå til fanen **Actions** på GitHub og klik på den seneste kørsel af **Byg Workoutslop**.
+2. Hent **Workoutslop-Windows** under **Artifacts** og pak zip-filen ud.
+3. Indeni ligger:
+   - `Workoutslop-Setup-0.1.0.exe` – installationsprogram (genvej på skrivebordet og i startmenuen).
+   - `Workoutslop-0.1.0-portable.exe` – kører uden installation, fx fra et USB-stik eller en skolecomputer.
+
+Vil du dele programmet med andre, så ret `version` i `package.json`, commit og push et tag:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Så lægges `.exe`-filerne op under **Releases**, hvor alle kan hente dem.
+
+### Byg det på din egen Windows-computer
+
+```bash
+npm install
+npm run dist
+```
+
+Programmerne havner i mappen `dist/`. På macOS og Linux hedder kommandoerne `npm run dist:mac` og
+`npm run dist:linux`.
+
+> **"Windows beskyttede din pc":** Programmet er ikke signeret med et (dyrt) kodesigneringscertifikat, så
+> Windows SmartScreen advarer første gang. Klik **Flere oplysninger → Kør alligevel**.
 
 ### Tilføj en øvelse
 
