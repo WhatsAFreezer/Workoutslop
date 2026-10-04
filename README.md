@@ -7,6 +7,16 @@ lang tid der er gået siden din sidste øvelse.
 
 <p align="center"><img src="docs/overlay.png" width="340" alt="Overlayet foreslår 22 armbøjninger i en pause i Counter-Strike 2"></p>
 
+## Hent Workoutslop
+
+**[⬇ Hent Workoutslop til Windows](https://github.com/WhatsAFreezer/Workoutslop/releases/latest/download/Workoutslop-Setup.exe)**
+
+1. Dobbeltklik på `Workoutslop-Setup.exe`.
+2. Workoutslop installeres og starter af sig selv – der er ingen trin at klikke sig igennem.
+3. Svar på den korte opsætning, og start et spil.
+
+Linket giver altid den nyeste version, og appen opdaterer sig selv bagefter.
+
 ## Sådan bruges den
 
 1. **Start appen.** Første gang kommer en hurtig opsætning i seks trin. Den kan altid åbnes igen fra ikonet i
@@ -181,10 +191,18 @@ WORKOUTSLOP_DATA_DIR=.workoutslop-data npm start
 
 ## Installér appen
 
-Workoutslop installeres som et almindeligt Windows-program med **ét installationsprogram**:
-`Workoutslop-Setup-x.y.z.exe`. Det lægger en genvej i startmenuen og på skrivebordet, og appen kan
-afinstalleres under **Indstillinger → Apps** som alle andre programmer. Efter installationen starter du bare
-Workoutslop fra startmenuen – eller slår **Start sammen med computeren** til i opsætningen.
+Installationen er én fil: [`Workoutslop-Setup.exe`](https://github.com/WhatsAFreezer/Workoutslop/releases/latest/download/Workoutslop-Setup.exe). Dobbeltklik på den, så sker resten automatisk:
+
+- Workoutslop installeres for din bruger (det kræver ikke administrator).
+- Der kommer en genvej i startmenuen og på skrivebordet.
+- Appen starter og viser opsætningen.
+
+Når opsætningen er gemt, kører Workoutslop i baggrunden med et ikon ved uret (klik på **^**, hvis det er
+skjult). Åbner du Workoutslop fra startmenuen igen, kommer vinduet frem. Slår du **Start sammen med
+computeren** til, starter appen stille i baggrunden, når computeren tænder.
+
+Appen afinstalleres under **Indstillinger → Apps** som alle andre programmer. Dine indstillinger og din
+træningshistorik bliver liggende, så de er der, hvis du installerer igen.
 
 > **"Windows beskyttede din pc":** Programmet er ikke signeret med et (dyrt) kodesigneringscertifikat, så
 > Windows SmartScreen advarer første gang. Klik **Flere oplysninger → Kør alligevel**.
@@ -222,7 +240,7 @@ npm install
 npm run dist
 ```
 
-Installationsprogrammet havner i mappen `dist/`. Ved almindelige push bygger GitHub det også – det ligger under
+Installationsprogrammet (`Workoutslop-Setup.exe`) havner i mappen `dist/`. Ved almindelige push bygger GitHub det også – det ligger under
 **Actions → kørslen → Artifacts**.
 
 ### Tilføj en øvelse

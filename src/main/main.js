@@ -619,7 +619,8 @@ function draftSettings(draft) {
 function applyLoginItem() {
   if (process.platform !== 'win32' && process.platform !== 'darwin') return;
   // Under udvikling (npm start) skal Electron have stien til appen med.
-  const args = app.isPackaged ? [] : [app.getAppPath()];
+  // --hidden: start stille i baggrunden, når computeren tænder.
+  const args = [...(app.isPackaged ? [] : [app.getAppPath()]), '--hidden'];
   app.setLoginItemSettings({ openAtLogin: settings.openAtLogin, args });
 }
 
@@ -731,7 +732,10 @@ function registerIpc() {
     if (wasFirstRun && Notification.isSupported()) {
       new Notification({
         title: 'Workoutslop kører nu',
-        body: 'Start et spil – så foreslår jeg øvelser i pauserne. Du finder mig i systembakken.',
+        body:
+          process.platform === 'win32'
+            ? 'Start et spil – så foreslår jeg øvelser i pauserne. Du finder mig ved uret (klik på ^, hvis ikonet er skjult).'
+            : 'Start et spil – så foreslår jeg øvelser i pauserne. Du finder mig i systembakken.',
         icon: APP_ICON,
       }).show();
     }
@@ -785,7 +789,10 @@ function start() {
   startGamepadPolling();
   setInterval(tick, TICK_MS);
 
-  if (!settings.setupComplete) openSetup();
+  // Starter man selv appen (fx fra startmenuen), vises vinduet, så man kan se, at den kører.
+  // Ved automatisk start sammen med computeren kører den bare stille i baggrunden.
+  const startedAtLogin = process.argv.includes('--hidden') || app.getLoginItemSettings().wasOpenedAtLogin;
+  if (!settings.setupComplete || !startedAtLogin) openSetup();
 }
 
 if (!app.requestSingleInstanceLock()) {

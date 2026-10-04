@@ -51,15 +51,15 @@
       ]
     },
     "nsis": {
-      "oneClick": false,
+      "oneClick": true,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
+      "runAfterFinish": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "runAfterFinish": true,
       "shortcutName": "Workoutslop",
       "uninstallDisplayName": "Workoutslop",
-      "artifactName": "Workoutslop-Setup-${version}.${ext}"
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "Workoutslop-Setup.${ext}"
     },
     "mac": {
       "target": "dmg",
