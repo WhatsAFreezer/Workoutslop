@@ -90,6 +90,24 @@
     };
   };
 
+  // Siddende med underarmene på lårene (håndledscurls). Kun hånden bevæger sig.
+  const wristCurlPose = (hand) => ({
+    hip: [92, 112],
+    torso: -55,
+    arm: { to: [135, 104], bend: 1, hand },
+    leg: { a: 0, b: 90 },
+  });
+
+  // Siddende med armen strakt frem; den anden hånd trækker i fingrene.
+  const STRETCH_HAND = at([92, 66], -2, 52);
+  const wristStretchPose = (hand) => ({
+    hip: [92, 112],
+    torso: -90,
+    arm: { a: -2, b: -2, hand },
+    arm2: { to: at(STRETCH_HAND, hand, 8), bend: 1 },
+    leg: { a: 0, b: 90 },
+  });
+
   const curlDown = { ...standing(), arm: { a: 94, b: 94 }, arm2: { a: 86, b: 86 } };
   const curlUp = { ...standing(), arm: { a: 94, b: -60 }, arm2: { a: 86, b: -66 } };
 
@@ -778,6 +796,51 @@
         { hip: [96, 104], torso: 0, head: 0, arm: { to: [142, 53], bend: -1 }, leg: { to: [66, F], bend: 1, foot: 0 } },
       ],
       tempo: 950,
+    },
+
+    wristStretch: {
+      view: 'side',
+      props: [floor, { type: 'bench', x: 62, w: 50, top: 116 }],
+      frames: [wristStretchPose(-90), wristStretchPose(90)],
+      tempo: 700,
+      holds: [1600, 1600],
+    },
+
+    wristCurl: {
+      view: 'side',
+      props: [
+        floor,
+        { type: 'bench', x: 62, w: 50, top: 116 },
+        { type: 'dumbbell', on: 'grip1', far: true },
+        { type: 'dumbbell', on: 'grip0' },
+      ],
+      frames: [wristCurlPose(60), wristCurlPose(-55)],
+      tempo: 700,
+      holds: [150, 250],
+    },
+
+    reverseWristCurl: {
+      view: 'side',
+      props: [
+        floor,
+        { type: 'bench', x: 62, w: 50, top: 116 },
+        { type: 'dumbbell', on: 'grip1', far: true },
+        { type: 'dumbbell', on: 'grip0' },
+      ],
+      frames: [wristCurlPose(50), wristCurlPose(-35)],
+      tempo: 750,
+      holds: [150, 250],
+    },
+
+    farmersHold: {
+      view: 'side',
+      props: [floor, { type: 'dumbbell', on: 'hand1', far: true }, { type: 'dumbbell', on: 'hand0' }],
+      frames: [
+        { ...standing(), arm: { a: 92, b: 91 }, arm2: { a: 88, b: 89 } },
+        { ...standing(), hip: [120, 75], arm: { a: 91, b: 90 }, arm2: { a: 89, b: 90 } },
+      ],
+      tempo: 1600,
+      hold: 300,
     },
   };
 

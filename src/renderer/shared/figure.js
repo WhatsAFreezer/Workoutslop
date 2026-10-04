@@ -9,7 +9,8 @@
  *   arm / arm2 / leg / leg2: lemmer, enten som
  *     { a, b }          absolutte vinkler for øverste og nederste del, eller
  *     { to, bend }      et mål for hånd/ankel – albue/knæ udregnes (invers kinematik)
- *   leg kan også have `foot` (vinkel på foden).
+ *   leg kan også have `foot` (vinkel på foden), og arm kan have `hand` (vinkel på hånden,
+ *   så man kan se håndleddet bøje – fx i håndledscurls).
  *
  * Vinkler er i grader, hvor 0 = mod højre og 90 = nedad (SVG-koordinater).
  * Animationen glider mellem poserne, og lemmerne beholder deres længde.
@@ -26,6 +27,7 @@
     thigh: 36,
     shin: 34,
     foot: 9,
+    hand: 8,
     shoulderHalf: 11,
     hipHalf: 7,
   };
@@ -92,10 +94,11 @@
     const armSpecs = [pose.arm, pose.arm2 ?? pose.arm];
     const legSpecs = [pose.leg, pose.leg2 ?? pose.leg];
 
-    const arms = armSpecs.map((spec, i) => ({
-      root: shoulders[i],
-      ...solveLimb(shoulders[i], spec, DIM.upperArm, DIM.foreArm),
-    }));
+    const arms = armSpecs.map((spec, i) => {
+      const limb = solveLimb(shoulders[i], spec, DIM.upperArm, DIM.foreArm);
+      const grip = spec.hand != null ? move(limb.end, spec.hand, DIM.hand) : null;
+      return { root: shoulders[i], ...limb, handAngle: spec.hand ?? limb.lower, grip };
+    });
     const legs = legSpecs.map((spec, i) => {
       const limb = solveLimb(hips[i], spec, DIM.thigh, DIM.shin);
       const footAngle = spec.foot ?? (front ? (i === 0 ? 180 : 0) : limb.lower - 90);
@@ -116,8 +119,10 @@
       // Forskellig beskrivelse i de to poser: brug de udregnede vinkler.
       result = { a: lerpAngle(solvedA.upper, solvedB.upper, t), b: lerpAngle(solvedA.lower, solvedB.lower, t) };
     }
-    if (isLeg && (a.foot != null || b.foot != null)) {
-      result.foot = lerpAngle(a.foot ?? solvedA.footAngle, b.foot ?? solvedB.footAngle, t);
+    // Fod (ben) eller hånd (arm), hvis en af poserne angiver den.
+    const [key, solvedKey] = isLeg ? ['foot', 'footAngle'] : ['hand', 'handAngle'];
+    if (a[key] != null || b[key] != null) {
+      result[key] = lerpAngle(a[key] ?? solvedA[solvedKey], b[key] ?? solvedB[solvedKey], t);
     }
     return result;
   }
@@ -146,6 +151,8 @@
     switch (kind) {
       case 'hand':
         return s.arms[index].end;
+      case 'grip':
+        return s.arms[index].grip || s.arms[index].end;
       case 'elbow':
         return s.arms[index].joint;
       case 'ankle':
@@ -248,14 +255,14 @@
     let out = behind.map((p) => propMarkup(p, s)).join('');
     out += farProps.map((p) => propMarkup(p, s)).join('');
     out += limbMarkup(s.legs[1], s.legs[1].toe, farCls);
-    out += limbMarkup(s.arms[1], null, farCls);
+    out += limbMarkup(s.arms[1], s.arms[1].grip, farCls);
     if (!side) {
       out += `<path class="fig-limb" d="${path(s.shoulders)}"/><path class="fig-limb" d="${path(s.hips)}"/>`;
     }
     out += `<path class="fig-limb" d="${path([s.hip, s.neck])}"/>`;
     out += `<circle class="fig-head" cx="${f(s.head[0])}" cy="${f(s.head[1])}" r="${DIM.headR}"/>`;
     out += limbMarkup(s.legs[0], s.legs[0].toe, 'fig-limb');
-    out += limbMarkup(s.arms[0], null, 'fig-limb');
+    out += limbMarkup(s.arms[0], s.arms[0].grip, 'fig-limb');
     out += front.map((p) => propMarkup(p, s)).join('');
     return out;
   }
@@ -325,6 +332,7 @@
       for (const arm of s.arms) {
         include(arm.joint);
         include(arm.end, handRoom); // plads til håndvægte og vægtskiver
+        if (arm.grip) include(arm.grip, handRoom);
       }
       for (const leg of s.legs) {
         include(leg.joint);

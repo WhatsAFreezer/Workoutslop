@@ -192,3 +192,18 @@ test('nakke, holdning, preacher curls og vægtstang', () => {
     assert.ok(barbellOnly.includes(id), id);
   }
 });
+
+test('arme inkluderer underarme', () => {
+  const ids = engine
+    .availableExercises(EXERCISES, { level: 2, equipment: ['dumbbells', 'barbell'], focus: ['arms'] })
+    .map((e) => e.id);
+  for (const id of ['wristCurl', 'reverseWristCurl', 'hammerCurl', 'reverseCurl', 'farmersHold', 'wristStretch']) {
+    assert.ok(ids.includes(id), id);
+  }
+  assert.ok(engine.focusAreasOf(byId('deadHang')).includes('arms'));
+  // Uden udstyr: håndledsstræk er altid muligt.
+  const bodyweight = engine
+    .availableExercises(EXERCISES, { level: 1, equipment: [], focus: ['arms'] })
+    .map((e) => e.id);
+  assert.ok(bodyweight.includes('wristStretch'));
+});

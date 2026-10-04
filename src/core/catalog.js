@@ -36,6 +36,7 @@ const MUSCLE_GROUPS = {
   neck: 'Nakke',
   biceps: 'Biceps',
   triceps: 'Triceps',
+  forearms: 'Underarme & greb',
   legs: 'Ben & balder',
   core: 'Mave & core',
   cardio: 'Kondition',
@@ -65,8 +66,8 @@ const FOCUS_AREAS = [
   {
     id: 'arms',
     name: 'Arme',
-    description: 'Biceps curls, preacher curls, dips og triceps.',
-    groups: ['biceps', 'triceps'],
+    description: 'Biceps, triceps og underarme – curls, dips, håndledscurls og greb.',
+    groups: ['biceps', 'triceps', 'forearms'],
   },
 ];
 
