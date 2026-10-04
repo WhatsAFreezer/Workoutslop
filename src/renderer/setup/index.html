@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="da">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+    />
+    <title>Workoutslop – opsætning</title>
+    <link rel="stylesheet" href="../shared/theme.css" />
+    <link rel="stylesheet" href="setup.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <svg class="logo" viewBox="0 0 48 48" aria-hidden="true">
+            <rect width="48" height="48" rx="12" />
+            <path d="M14 17v14M34 17v14M10 21v6M38 21v6M14 24h20" />
+          </svg>
+          <div>
+            <strong>Workoutslop</strong>
+            <span>Motion i pauserne</span>
+          </div>
+        </div>
+
+        <nav>
+          <ol class="nav" id="nav">
+            <li>
+              <button type="button" data-step="0">
+                <span class="num">1</span><span><b>Styrke</b><small>Dit niveau</small></span>
+              </button>
+            </li>
+            <li>
+              <button type="button" data-step="1">
+                <span class="num">2</span><span><b>Udstyr</b><small>Dine redskaber</small></span>
+              </button>
+            </li>
+            <li>
+              <button type="button" data-step="2">
+                <span class="num">3</span><span><b>Pauser</b><small>Hvornår og hvor</small></span>
+              </button>
+            </li>
+            <li>
+              <button type="button" data-step="3">
+                <span class="num">4</span><span><b>Spil</b><small>Hvad du spiller</small></span>
+              </button>
+            </li>
+          </ol>
+        </nav>
+
+        <p class="sidebar-note">Du kan altid åbne opsætningen igen fra ikonet i systembakken.</p>
+      </aside>
+
+      <main class="content">
+        <div class="scroll">
+          <!-- Trin 1 -->
+          <section class="step" data-step="0">
+            <p class="eyebrow">Trin 1 af 4</p>
+            <h1>Hvor stærk er du?</h1>
+            <p class="lead">Dit niveau bestemmer, hvor mange gentagelser du får. Du kan altid ændre det senere.</p>
+            <div class="level-grid" id="levels" role="radiogroup" aria-label="Styrkeniveau"></div>
+          </section>
+
+          <!-- Trin 2 -->
+          <section class="step" data-step="1" hidden>
+            <p class="eyebrow">Trin 2 af 4</p>
+            <h1>Hvilke redskaber har du?</h1>
+            <p class="lead">
+              Vælg det, du har ved computeren. Uden redskaber får du kropsvægtsøvelser som armbøjninger, squats og
+              planke.
+            </p>
+            <div class="equip-grid" id="equipment"></div>
+            <p class="count" id="exercise-count"></p>
+          </section>
+
+          <!-- Trin 3 -->
+          <section class="step" data-step="2" hidden>
+            <p class="eyebrow">Trin 3 af 4</p>
+            <h1>Hvornår skal du træne?</h1>
+            <p class="lead">Workoutslop foreslår kun øvelser, når der er en pause i spillet – fx mellem to kampe.</p>
+
+            <div class="field">
+              <h2>Hvor ofte?</h2>
+              <div class="segmented" id="frequency" role="radiogroup" aria-label="Hvor ofte"></div>
+              <p class="hint">
+                Mindste tid mellem to øvelser. Jo længere tid der er gået siden sidst, jo flere gentagelser får du.
+              </p>
+            </div>
+
+            <div class="field">
+              <div class="toggle-row">
+                <div>
+                  <h2>Find pauser ud fra inaktivitet</h2>
+                  <p class="hint">
+                    Når du ikke har rørt mus og tastatur et stykke tid, mens spillet kører (kø, loadingskærm, mellem
+                    kampe). Slå det fra, hvis du spiller med controller.
+                  </p>
+                </div>
+                <label class="switch"><input type="checkbox" id="idle-toggle" /><span></span></label>
+              </div>
+              <div class="slider-row" id="idle-row">
+                <label for="idle-seconds">Pause efter</label>
+                <input type="range" id="idle-seconds" min="10" max="90" step="5" />
+                <output id="idle-out" for="idle-seconds"></output>
+              </div>
+            </div>
+
+            <div class="field">
+              <h2>Hvor skal øvelsen vises?</h2>
+              <div class="corner-wrap">
+                <div class="screen" id="corners" role="radiogroup" aria-label="Placering på skærmen">
+                  <button type="button" data-corner="top-left" aria-label="Øverst til venstre"></button>
+                  <button type="button" data-corner="top-right" aria-label="Øverst til højre"></button>
+                  <button type="button" data-corner="bottom-left" aria-label="Nederst til venstre"></button>
+                  <button type="button" data-corner="bottom-right" aria-label="Nederst til højre"></button>
+                </div>
+                <p class="hint">
+                  Vælg et hjørne, hvor overlayet ikke dækker noget vigtigt. Spillet skal køre i
+                  <b>kantløst vindue</b> (borderless), for at overlayet kan ses ovenpå.
+                </p>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="toggle-row">
+                <div>
+                  <h2>Afspil en lyd</h2>
+                  <p class="hint">En kort lyd, når en ny øvelse dukker op.</p>
+                </div>
+                <label class="switch"><input type="checkbox" id="sound-toggle" /><span></span></label>
+              </div>
+              <div class="toggle-row" id="login-row">
+                <div>
+                  <h2>Start sammen med computeren</h2>
+                  <p class="hint">Så kører Workoutslop altid, når du spiller.</p>
+                </div>
+                <label class="switch"><input type="checkbox" id="login-toggle" /><span></span></label>
+              </div>
+            </div>
+          </section>
+
+          <!-- Trin 4 -->
+          <section class="step" data-step="3" hidden>
+            <p class="eyebrow">Trin 4 af 4</p>
+            <h1>Dine spil</h1>
+            <p class="lead">Workoutslop opdager selv, når du starter et spil, og holder øje med pauserne.</p>
+
+            <div class="field">
+              <h2>Præcis registrering af kampe</h2>
+              <p class="hint">
+                Counter-Strike 2 og Dota 2 kan selv fortælle, hvornår en kamp slutter. Det kræver en lille fil i
+                spillets mappe – tryk på knappen, så klarer Workoutslop det.
+              </p>
+              <div class="integrations" id="integrations"></div>
+              <p class="warning" id="gsi-error" hidden></p>
+            </div>
+
+            <div class="field">
+              <h2>Spil der genkendes automatisk</h2>
+              <div class="chips" id="known-games"></div>
+              <p class="hint">
+                <span class="chip-dot"></span> = kan skelne mellem lobby og kamp. De andre bruger inaktivitet.
+              </p>
+            </div>
+
+            <div class="field">
+              <h2>Tilføj dit eget spil</h2>
+              <p class="hint">
+                Start spillet, tryk på <b>Find kørende programmer</b> og vælg det på listen – eller skriv programnavnet,
+                fx <code>javaw.exe</code> for Minecraft Java Edition.
+              </p>
+              <div class="add-row">
+                <input
+                  id="custom-process"
+                  list="process-list"
+                  placeholder="Programnavn, fx MitSpil.exe"
+                  autocomplete="off"
+                />
+                <datalist id="process-list"></datalist>
+                <button type="button" class="btn" id="refresh-processes">Find kørende programmer</button>
+                <button type="button" class="btn primary" id="add-game">Tilføj</button>
+              </div>
+              <ul class="custom-list" id="custom-games"></ul>
+            </div>
+
+            <div class="field">
+              <h2>Genvejstaster</h2>
+              <p class="hint">Virker også, mens du er inde i spillet.</p>
+              <dl class="hotkeys" id="hotkeys"></dl>
+            </div>
+          </section>
+        </div>
+
+        <footer class="footer">
+          <button type="button" class="btn ghost" id="preview">Vis et eksempel</button>
+          <span class="status" id="status" role="status"></span>
+          <button type="button" class="btn" id="back">Tilbage</button>
+          <button type="button" class="btn" id="next">Næste</button>
+          <button type="button" class="btn primary" id="save">Gem og start</button>
+        </footer>
+      </main>
+    </div>
+
+    <script src="setup.js"></script>
+  </body>
+</html>

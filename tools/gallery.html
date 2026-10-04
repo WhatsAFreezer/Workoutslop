@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="da">
+  <head>
+    <meta charset="utf-8" />
+    <title>Workoutslop – animationsgalleri</title>
+    <link rel="stylesheet" href="../src/renderer/shared/theme.css" />
+    <style>
+      body {
+        background: var(--bg);
+        padding: 24px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 4px;
+      }
+      p {
+        color: var(--muted);
+        margin: 0 0 20px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 16px;
+      }
+      .cell {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 10px 12px 12px;
+      }
+      .cell h2 {
+        font-size: 13px;
+        font-weight: 600;
+        margin: 0 0 6px;
+        color: var(--muted);
+      }
+      svg {
+        width: 100%;
+        aspect-ratio: 1.6;
+        display: block;
+        background: var(--fig-bg);
+        border-radius: 10px;
+      }
+      .frames {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 6px;
+        margin-top: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Animationsgalleri</h1>
+    <p>Alle øvelsesanimationer. Tilføj <code>?frames</code> til adressen for at se hver nøglepose for sig.</p>
+    <div class="grid" id="grid"></div>
+    <script src="../src/renderer/shared/figure.js"></script>
+    <script src="../src/renderer/shared/animations.js"></script>
+    <script>
+      const showFrames = location.search.includes('frames');
+      const grid = document.getElementById('grid');
+      for (const [name, anim] of Object.entries(ANIMATIONS)) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.innerHTML = `<h2>${name}</h2>`;
+        if (showFrames) {
+          const frames = document.createElement('div');
+          frames.className = 'frames';
+          Figure.keyframeTimes(anim).forEach((time) => {
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            frames.appendChild(svg);
+            Figure.renderFrame(svg, anim, time);
+          });
+          cell.appendChild(frames);
+        } else {
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          cell.appendChild(svg);
+          Figure.play(svg, anim);
+        }
+        grid.appendChild(cell);
+      }
+    </script>
+  </body>
+</html>

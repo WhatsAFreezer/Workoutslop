@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="da">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+    />
+    <title>Workoutslop</title>
+    <link rel="stylesheet" href="../shared/theme.css" />
+    <link rel="stylesheet" href="overlay.css" />
+  </head>
+  <body>
+    <main id="root">
+      <!-- Fuld visning: øvelsen med animation og vejledning -->
+      <section id="card" class="card" hidden aria-live="polite">
+        <header class="card-head">
+          <span class="badge"><span class="dot"></span><span id="context">Pause registreret</span></span>
+          <button id="close" class="icon-btn" type="button" aria-label="Spring over">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </header>
+
+        <div class="demo"><svg id="figure" role="img" aria-label="Animation der viser øvelsen"></svg></div>
+
+        <div class="headline">
+          <div class="title">
+            <div id="muscle" class="muscle"></div>
+            <h1 id="name"></h1>
+          </div>
+          <div class="amount">
+            <strong id="amount"></strong>
+            <span id="unit"></span>
+          </div>
+        </div>
+
+        <div id="timer" class="timer" hidden>
+          <button id="timer-btn" class="btn timer-btn" type="button">Start timer</button>
+          <div class="timer-track"><div id="timer-fill" class="timer-fill"></div></div>
+        </div>
+
+        <ol id="steps" class="steps"></ol>
+        <p id="tip" class="tip"></p>
+
+        <div class="actions">
+          <button id="done" class="btn primary" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+            Færdig
+          </button>
+          <button id="reroll" class="btn" type="button" title="Foreslå en anden øvelse">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8a8 8 0 1 0 .5 7M19 3v5h-5" /></svg>
+            Anden
+          </button>
+          <button id="snooze" class="btn" type="button">Om 10 min</button>
+        </div>
+
+        <footer class="meta">
+          <span id="since"></span>
+          <span id="hint"></span>
+        </footer>
+      </section>
+
+      <!-- Lille visning når kampen er startet igen -->
+      <section id="compact" class="compact" hidden>
+        <button id="compact-open" class="compact-main" type="button" title="Vis øvelsen igen">
+          <span class="compact-label">Kampen er i gang – nåede du det?</span>
+          <span id="compact-text" class="compact-text"></span>
+        </button>
+        <button id="compact-done" class="icon-btn ok" type="button" aria-label="Færdig">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+        </button>
+        <button id="compact-close" class="icon-btn" type="button" aria-label="Spring over">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </section>
+
+      <!-- Kort "godt gået" efter en gennemført øvelse -->
+      <section id="celebrate" class="celebrate" hidden>
+        <div class="check">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+        </div>
+        <div>
+          <div class="celebrate-title">Godt gået!</div>
+          <div id="celebrate-text" class="celebrate-text"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="../shared/figure.js"></script>
+    <script src="../shared/animations.js"></script>
+    <script src="overlay.js"></script>
+  </body>
+</html>

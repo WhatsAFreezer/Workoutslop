@@ -1,0 +1,100 @@
+/* Fælles farver og grundstil for opsætning og overlay. */
+:root {
+  --bg: #0d1017;
+  --panel: #151a24;
+  --panel-2: #1c2330;
+  --panel-3: #232c3b;
+  --border: #2a3342;
+  --text: #e9eef7;
+  --muted: #9aa6b8;
+  --faint: #6b778a;
+  --accent: #4ade80;
+  --accent-strong: #22c55e;
+  --accent-ink: #052e16;
+  --accent-soft: rgba(74, 222, 128, 0.14);
+  --warn: #fbbf24;
+  --danger: #f87171;
+
+  --fig-color: #e9eef7;
+  --fig-prop: #556074;
+  --fig-weight: #4ade80;
+  --fig-band: #f472b6;
+  --fig-floor: #3a4456;
+  --fig-bg: #11161f;
+
+  --radius: 14px;
+  --font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* Tændstikmanden */
+.fig-limb {
+  fill: none;
+  stroke: var(--fig-color);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.fig-far {
+  opacity: 0.38;
+}
+.fig-head {
+  fill: var(--fig-color);
+}
+.fig-floor {
+  stroke: var(--fig-floor);
+  stroke-width: 2;
+}
+.fig-prop {
+  fill: none;
+  stroke: var(--fig-prop);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.fig-prop rect {
+  fill: var(--fig-prop);
+  stroke: none;
+}
+.fig-bar {
+  fill: var(--fig-prop);
+  stroke: none;
+}
+.fig-wall {
+  stroke-width: 6;
+}
+.fig-weight circle {
+  fill: var(--fig-weight);
+}
+.fig-weight line {
+  stroke: var(--fig-weight);
+  stroke-width: 3;
+}
+.fig-weight .fig-weight-hole {
+  fill: var(--fig-bg);
+}
+.fig-band {
+  stroke: var(--fig-band);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
