@@ -128,9 +128,9 @@ næste gang. Skifter du styrkeniveau, starter tilpasningen forfra.
 
 ### 4. Hvilken øvelse?
 
-Kun øvelser, der passer til dit udstyr, dit niveau og dit fokus, kan vælges. En øvelse kan høre til flere
-fokusområder – pull-ups tæller fx både som ryg og arme. Passer ingen øvelser til dit fokus med det udstyr, du
-har, får du en øvelse fra hele kroppen i stedet. For variationens skyld gøres det mindre
+Kun øvelser, der passer til dit udstyr, dit niveau og dit fokus, kan vælges. Hver øvelse hører til én
+muskelgruppe og dermed ét fokusområde – pull-ups er fx ryg, og bird dog er mave & core – så du får aldrig øvelser
+uden for det fokus, du har valgt. For variationens skyld gøres det mindre
 sandsynligt at få samme øvelse som sidst, en øvelse fra den seneste time eller den samme muskelgruppe som
 sidst. Øvelser med dit eget udstyr bliver valgt lidt oftere.
 

@@ -115,11 +115,11 @@ class Coach {
   }
 
   entry(now, suggestion, status) {
-    const { exercise, amount, level, group } = suggestion;
+    const { exercise, amount, level } = suggestion;
     const entry = {
       at: now,
       exerciseId: exercise.id,
-      muscleGroup: group ?? exercise.muscleGroup,
+      muscleGroup: exercise.muscleGroup,
       amount,
       unit: exercise.unit,
       status,

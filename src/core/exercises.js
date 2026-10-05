@@ -3,9 +3,6 @@
 // Alle øvelser appen kan foreslå.
 //
 // muscleGroup: se MUSCLE_GROUPS i catalog.js. Bestemmer også fokusområdet.
-// extraGroups: (valgfri) muskelgrupper øvelsen også træner, fx biceps for pull-ups. Vælger man
-//            kun et fokus, hvor øvelsens egen gruppe ikke er med, vises og tælles øvelsen under
-//            den første af disse grupper, der er med i fokus (pull-ups under Biceps ved fokus Arme).
 // equipment: redskaber der kræves. En streng betyder "skal have", en liste
 //            betyder "mindst én af dem" (fx håndvægt ELLER kettlebell).
 // unit:      'reps' (gentagelser), 'seconds' (hold i X sekunder) eller
@@ -150,7 +147,6 @@ const EXERCISES = [
     id: 'burpee',
     name: 'Burpees',
     muscleGroup: 'cardio',
-    extraGroups: ['chest'],
     equipment: [],
     unit: 'reps',
     difficulty: 3,
@@ -224,7 +220,6 @@ const EXERCISES = [
     id: 'diamondPushup',
     name: 'Diamant-armbøjninger',
     muscleGroup: 'triceps',
-    extraGroups: ['chest'],
     equipment: [],
     unit: 'reps',
     difficulty: 3,
@@ -275,7 +270,6 @@ const EXERCISES = [
     id: 'pullup',
     name: 'Pull-ups',
     muscleGroup: 'back',
-    extraGroups: ['biceps'],
     equipment: ['pullupBar'],
     unit: 'reps',
     difficulty: 3,
@@ -292,7 +286,6 @@ const EXERCISES = [
     id: 'chinup',
     name: 'Chin-ups',
     muscleGroup: 'back',
-    extraGroups: ['biceps'],
     equipment: ['pullupBar'],
     unit: 'reps',
     difficulty: 3,
@@ -309,7 +302,6 @@ const EXERCISES = [
     id: 'negativePullup',
     name: 'Negative pull-ups',
     muscleGroup: 'back',
-    extraGroups: ['biceps'],
     equipment: ['pullupBar'],
     unit: 'reps',
     difficulty: 2,
@@ -326,7 +318,6 @@ const EXERCISES = [
     id: 'deadHang',
     name: 'Hæng i stangen',
     muscleGroup: 'back',
-    extraGroups: ['forearms'],
     equipment: ['pullupBar'],
     unit: 'seconds',
     difficulty: 2,
@@ -476,7 +467,6 @@ const EXERCISES = [
     id: 'benchDip',
     name: 'Dips på bænk',
     muscleGroup: 'triceps',
-    extraGroups: ['chest'],
     equipment: ['bench'],
     unit: 'reps',
     difficulty: 2,
@@ -937,7 +927,6 @@ const EXERCISES = [
     id: 'birdDog',
     name: 'Bird dog',
     muscleGroup: 'core',
-    extraGroups: ['back'],
     equipment: [],
     unit: 'perSide',
     sideLabel: 'pr. side',
@@ -1049,7 +1038,6 @@ const EXERCISES = [
     id: 'dumbbellPullover',
     name: 'Pullover med håndvægt',
     muscleGroup: 'chest',
-    extraGroups: ['back'],
     equipment: ['bench', 'dumbbells'],
     unit: 'reps',
     difficulty: 2,

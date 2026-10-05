@@ -66,33 +66,14 @@ function baseAmount(exercise, level) {
   return exercise.amounts[level - 1] ?? null;
 }
 
-const groupsOf = (exercise) => [exercise.muscleGroup, ...(exercise.extraGroups || [])];
-
-// De fokusområder en øvelse hører til, fx ['backPosture', 'arms'] for pull-ups.
+// Det fokusområde en øvelse hører til – via dens muskelgruppe, fx ['backPosture'] for pull-ups.
 function focusAreasOf(exercise) {
-  const groups = groupsOf(exercise);
-  return FOCUS_AREAS.filter((area) => area.groups.some((g) => groups.includes(g))).map((area) => area.id);
-}
-
-// Muskelgrupperne i de valgte fokusområder – eller null, når der ikke er valgt fokus (hele kroppen).
-function focusGroups(focus) {
-  if (!focus || focus.length === 0) return null;
-  return new Set(FOCUS_AREAS.filter((area) => focus.includes(area.id)).flatMap((area) => area.groups));
+  return FOCUS_AREAS.filter((area) => area.groups.includes(exercise.muscleGroup)).map((area) => area.id);
 }
 
 // Intet fokus valgt = hele kroppen.
 function matchesFocus(exercise, focus) {
-  const groups = focusGroups(focus);
-  return !groups || groupsOf(exercise).some((g) => groups.has(g));
-}
-
-// Den muskelgruppe en øvelse vises og tælles under med det valgte fokus: dens egen –
-// medmindre den ikke er med i fokus, så den første af dens ekstra grupper, der er.
-// Fx tæller pull-ups som Biceps, når fokus kun er Arme.
-function groupFor(exercise, focus) {
-  const groups = focusGroups(focus);
-  if (!groups || groups.has(exercise.muscleGroup)) return exercise.muscleGroup;
-  return (exercise.extraGroups || []).find((g) => groups.has(g)) ?? exercise.muscleGroup;
+  return !focus || focus.length === 0 || focusAreasOf(exercise).some((area) => focus.includes(area));
 }
 
 // Antal sæt om dagen for en muskelgruppe – eller null, hvis der ikke er sat noget mål.
@@ -103,10 +84,7 @@ function setsFor(settings, group) {
 
 // Fravalgte øvelser og muskelgrupper sat til 0 sæt er slået fra.
 function isEnabled(exercise, settings) {
-  return (
-    !(settings.disabledExercises || []).includes(exercise.id) &&
-    setsFor(settings, groupFor(exercise, settings.focus)) !== 0
-  );
+  return !(settings.disabledExercises || []).includes(exercise.id) && setsFor(settings, exercise.muscleGroup) !== 0;
 }
 
 function availableExercises(exercises, settings) {
@@ -136,7 +114,7 @@ function setsDoneToday(history, now) {
 // mindst én mulig øvelse tæller med – ellers kunne målet aldrig nås.
 function dailyPlan(exercises, settings, history, now) {
   const done = setsDoneToday(history, now);
-  const groups = [...new Set(availableExercises(exercises, settings).map((ex) => groupFor(ex, settings.focus)))];
+  const groups = [...new Set(availableExercises(exercises, settings).map((ex) => ex.muscleGroup))];
   const perGroup = {};
   let target = 0;
   let doneTotal = 0;
@@ -222,19 +200,14 @@ function chooseExercise({
   exclude = [],
   ignoreTargets = false,
 }) {
-  let effective = settings;
+  // Kun øvelser fra det valgte fokus – passer ingen, foreslås der ikke noget.
   let pool = availableExercises(exercises, settings).filter((ex) => !exclude.includes(ex.id));
-  // Passer intet til fokus + udstyr, er det bedre at foreslå noget andet end ingenting.
-  if (pool.length === 0) {
-    effective = { ...settings, focus: [] };
-    pool = availableExercises(exercises, effective).filter((ex) => !exclude.includes(ex.id));
-  }
   if (pool.length === 0) return null;
 
   // Dagens sæt: vælg kun blandt muskelgrupper, der mangler sæt. Er alle mål nået, er der fri.
-  const plan = dailyPlan(exercises, effective, history, now);
+  const plan = dailyPlan(exercises, settings, history, now);
   if (plan.hasTargets && !ignoreTargets) {
-    pool = pool.filter((ex) => (plan.perGroup[groupFor(ex, effective.focus)]?.remaining ?? 1) > 0);
+    pool = pool.filter((ex) => (plan.perGroup[ex.muscleGroup]?.remaining ?? 1) > 0);
     if (pool.length === 0) return null;
   }
   const from = startOfDay(now);
@@ -244,7 +217,7 @@ function chooseExercise({
   const last = recent.length > 0 ? recent[recent.length - 1] : null;
 
   const weights = pool.map((ex) => {
-    let w = difficultyWeight(effective.level, ex.difficulty);
+    let w = difficultyWeight(settings.level, ex.difficulty);
     // Brugeren har valgt udstyret af en grund – brug det lidt oftere.
     if (ex.equipment.length > 0) w *= 1.6;
     const timesRecently = recent.filter((h) => h.exerciseId === ex.id).length;
@@ -252,7 +225,7 @@ function chooseExercise({
     if (last && last.exerciseId === ex.id) w *= 0.1;
     if (last && last.muscleGroup === ex.muscleGroup) w *= 0.3;
     // Muskelgrupper der mangler flest af dagens sæt kommer først.
-    const group = plan.perGroup[groupFor(ex, effective.focus)];
+    const group = plan.perGroup[ex.muscleGroup];
     if (group && group.target > 0) w *= 0.5 + group.remaining / group.target;
     // Spred sættene ud på flere øvelser.
     w *= Math.pow(0.5, doneToday.filter((h) => h.exerciseId === ex.id).length);
@@ -275,9 +248,7 @@ function createSuggestion({ exercises, settings, history, now, random, exclude, 
   const minutesSinceLast = Number.isFinite(lastDone) ? (now - lastDone) / MINUTE : null;
   const progress = progressionFactor(history, exercise.id, settings.level);
   const { amount, factor } = computeAmount(exercise, settings.level, minutesSinceLast, progress);
-  // group: den muskelgruppe sættet tæller under (se groupFor).
-  const group = groupFor(exercise, settings.focus);
-  return { exercise, group, amount, factor, progress, level: settings.level, minutesSinceLast, createdAt: now };
+  return { exercise, amount, factor, progress, level: settings.level, minutesSinceLast, createdAt: now };
 }
 
 function unitLabel(exercise, amount) {
@@ -306,9 +277,7 @@ module.exports = {
   timeFactor,
   hasEquipment,
   focusAreasOf,
-  focusGroups,
   matchesFocus,
-  groupFor,
   setsFor,
   isEnabled,
   availableExercises,
