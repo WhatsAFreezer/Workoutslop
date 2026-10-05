@@ -5,17 +5,28 @@ const assert = require('node:assert/strict');
 const native = require('../src/main/windows-native');
 
 test('uden for Windows slås funktionerne stille fra', { skip: process.platform === 'win32' }, () => {
-  assert.deepEqual(native.capabilities(), { gamepads: false, fullscreenDetection: false, foregroundWindow: false });
+  assert.deepEqual(native.capabilities(), {
+    gamepads: false,
+    fullscreenDetection: false,
+    foregroundWindow: false,
+    windowList: false,
+  });
   assert.equal(native.readGamepad(0), null);
   assert.equal(native.isExclusiveFullscreen(), null);
   assert.equal(native.notificationState(), null);
   assert.equal(native.foregroundWindow(), null);
+  assert.equal(native.visibleWindowPids(), null);
   assert.equal(native.bringToTop(Buffer.alloc(8)), false);
 });
 
 // Kører på GitHubs Windows-maskine og tjekker, at kaldene til Windows virker.
 test('Windows: controller, fuldskærm og forgrundsvindue kan aflæses', { skip: process.platform !== 'win32' }, () => {
-  assert.deepEqual(native.capabilities(), { gamepads: true, fullscreenDetection: true, foregroundWindow: true });
+  assert.deepEqual(native.capabilities(), {
+    gamepads: true,
+    fullscreenDetection: true,
+    foregroundWindow: true,
+    windowList: true,
+  });
   for (let i = 0; i < native.XUSER_MAX_COUNT; i++) {
     const state = native.readGamepad(i);
     // Ingen controller på en build-server, men kaldet må ikke fejle.
@@ -32,6 +43,11 @@ test('Windows: controller, fuldskærm og forgrundsvindue kan aflæses', { skip: 
     assert.equal(typeof fg.coversMonitor, 'boolean');
     assert.ok(fg.rect.right >= fg.rect.left);
   }
+  // Listen over synlige vinduer kan læses (den kan være tom på en build-server).
+  const pids = native.visibleWindowPids();
+  assert.ok(pids instanceof Set, 'visibleWindowPids skal give et Set');
+  for (const pid of pids) assert.ok(Number.isInteger(pid) && pid > 0);
+
   // Et ugyldigt vindueshåndtag må ikke få appen til at crashe.
   assert.equal(native.bringToTop(Buffer.alloc(8)), false);
 });

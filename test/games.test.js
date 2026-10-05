@@ -30,9 +30,70 @@ test('egne spil og afkortede Linux-navne', () => {
   assert.equal(games.detectGame(['FortniteClient-'], games.KNOWN_GAMES).game.id, 'fortnite');
 });
 
+test('et spil regnes først som lukket, når det mangler i to scanninger', () => {
+  const d = new games.GameDetector();
+  const g = games.KNOWN_GAMES;
+  assert.equal(d.update(['cs2.exe'], g).game.id, 'cs2');
+  // Et enkelt mislykket opslag afbryder ikke.
+  assert.equal(d.update(['explorer.exe'], g).game.id, 'cs2');
+  assert.equal(d.update(['cs2.exe'], g).game.id, 'cs2');
+  assert.equal(d.update(['explorer.exe'], g).game.id, 'cs2');
+  assert.equal(d.update(['explorer.exe'], g), null);
+  assert.equal(d.update([], g), null);
+});
+
+test('et spil, hvis vindue er lukket, regnes som lukket – selv om processen kører videre', () => {
+  const d = new games.GameDetector();
+  const g = games.KNOWN_GAMES;
+  // Spillet starter: processen kører, men vinduet er ikke kommet endnu.
+  assert.equal(d.update(['cs2.exe'], g, []).game.id, 'cs2');
+  assert.equal(d.update(['cs2.exe'], g, ['cs2.exe']).game.id, 'cs2');
+  // Vinduet lukkes, men processen lukker langsomt ned (eller bliver liggende).
+  assert.equal(d.update(['cs2.exe'], g, []).game.id, 'cs2');
+  assert.equal(d.update(['cs2.exe'], g, []), null);
+  assert.equal(d.update(['cs2.exe'], g, []), null);
+  // Kommer vinduet igen, er spillet åbent igen.
+  assert.equal(d.update(['cs2.exe'], g, ['cs2.exe']).game.id, 'cs2');
+
+  // Spillet lukkes helt og startes igen: indtil vinduet dukker op, tæller processen.
+  d.update([], g, []);
+  d.update(['explorer.exe'], g, []);
+  assert.equal(d.update(['cs2.exe'], g, []).game.id, 'cs2');
+});
+
+test('vinduet kan ligge i en anden af spillets processer (League)', () => {
+  const d = new games.GameDetector();
+  const g = games.KNOWN_GAMES;
+  const lobby = ['LeagueClient.exe', 'LeagueClientUx.exe'];
+  assert.equal(d.update(lobby, g, ['LeagueClientUx.exe']).phase, 'lobby');
+  const match = [...lobby, 'League of Legends.exe'];
+  assert.equal(d.update(match, g, ['League of Legends.exe']).phase, 'match');
+  // Klienten lukkes til bakken: kun baggrundsprocessen uden vindue er tilbage.
+  d.update(['LeagueClient.exe'], g, []);
+  assert.equal(d.update(['LeagueClient.exe'], g, []), null);
+});
+
+test('uden vinduesoplysninger (fx ikke Windows) bruges kun proceslisten', () => {
+  const d = new games.GameDetector();
+  const g = games.KNOWN_GAMES;
+  assert.equal(d.update(['cs2.exe'], g, null).game.id, 'cs2');
+  assert.equal(d.update(['cs2.exe'], g, null).game.id, 'cs2');
+});
+
+test('et spil, der fjernes fra listen, forsvinder med det samme', () => {
+  const d = new games.GameDetector();
+  const auto = games.autoGamesToDefinitions([{ name: 'Wallpaper Engine', process: 'wallpaper32.exe' }]);
+  assert.equal(d.update(['wallpaper32.exe'], auto).game.name, 'Wallpaper Engine');
+  assert.equal(d.update(['wallpaper32.exe'], games.KNOWN_GAMES), null);
+});
+
 test('parser tasklist og ps', () => {
   const csv = '"System Idle Process","0","Services","0","8 K"\r\n"cs2.exe","4242","Console","1","1.234.567 K"\r\n';
   assert.deepEqual(games.parseTasklistCsv(csv), ['System Idle Process', 'cs2.exe']);
+  assert.deepEqual(games.parseTasklistEntries(csv), [
+    { name: 'System Idle Process', pid: 0 },
+    { name: 'cs2.exe', pid: 4242 },
+  ]);
   assert.deepEqual(games.parsePsOutput('  bash\n/Applications/Steam.app/Contents/MacOS/steam_osx\ncs2\n'), [
     'bash',
     'steam_osx',

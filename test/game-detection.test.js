@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { gameFromPath, isNotGame, GameFinder, isGameFocused } = require('../src/core/game-detection');
+const { gameFromPath, isNotGame, isKnownNonGame, GameFinder, isGameFocused } = require('../src/core/game-detection');
 
 test('spil i spilbiblioteker genkendes og får et pænt navn', () => {
   assert.deepEqual(gameFromPath('D:\\SteamLibrary\\steamapps\\common\\Hades II\\Ship\\Hades2.exe'), {
@@ -27,6 +27,29 @@ test('browsere og videoafspillere er ikke spil, selv i fuld skærm', () => {
   assert.ok(isNotGame('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'));
   assert.ok(isNotGame('C:\\Program Files\\VideoLAN\\VLC\\vlc.exe'));
   assert.ok(!isNotGame('C:\\Games\\MyGame\\MyGame.exe'));
+});
+
+test('værktøjer fra Steam (fx Wallpaper Engine) er ikke spil', () => {
+  assert.equal(gameFromPath('C:\\Steam\\steamapps\\common\\wallpaper_engine\\wallpaper32.exe'), null);
+  assert.equal(gameFromPath('C:\\Steam\\steamapps\\common\\wallpaper_engine\\ui32.exe'), null);
+  assert.equal(gameFromPath('D:\\steamapps\\common\\Lossless Scaling\\LosslessScaling.exe'), null);
+  assert.equal(gameFromPath('D:\\steamapps\\common\\SteamVR\\bin\\win64\\vrmonitor.exe'), null);
+  assert.equal(gameFromPath('D:\\steamapps\\common\\OBS Studio\\bin\\64bit\\obs64.exe'), null);
+  assert.ok(isKnownNonGame({ name: 'wallpaper engine', process: 'wallpaper32.exe' }));
+  assert.ok(isKnownNonGame({ name: 'Bongo Cat', process: 'BongoCat.exe' }));
+  assert.ok(!isKnownNonGame({ name: 'Hades II', process: 'Hades2.exe' }));
+
+  // Heller ikke som forslag, selv når de fylder skærmen.
+  const finder = new GameFinder({ fullscreenSeconds: 1 });
+  const tool = { path: 'C:\\Steam\\steamapps\\common\\wallpaper_engine\\ui32.exe', coversMonitor: true };
+  assert.equal(
+    finder.update(tool, 0, () => false),
+    null,
+  );
+  assert.equal(
+    finder.update(tool, 5000, () => false),
+    null,
+  );
 });
 
 test('GameFinder tilføjer biblioteksspil med det samme og foreslår fuldskærmsprogrammer efter et stykke tid', () => {

@@ -69,7 +69,13 @@ sammenligner med en liste over kendte spil, fx `cs2.exe`, `VALORANT-Win64-Shippi
 På Windows ser appen desuden, hvilket program der er i forgrunden. Ligger det i et spilbibliotek (Steam, Epic,
 Riot, Xbox, GOG, Ubisoft, EA eller Rockstar), bliver det automatisk tilføjet som spil. Programmer, der kører i
 fuld skærm i et stykke tid, bliver foreslået som mulige spil under **Spil** i opsætningen. Du kan også selv
-tilføje spil.
+tilføje spil. Værktøjer fra Steam som Wallpaper Engine, Lossless Scaling og SteamVR tælles ikke som spil, og
+finder appen et program, der ikke er et spil, kan du fjerne det med **Ikke et spil** på oversigten.
+
+**Når du lukker spillet:** Mange spil lukker vinduet, før programmet er helt lukket – og nogle bliver liggende
+i baggrunden. På Windows tæller et spil derfor kun som åbent, så længe det har et synligt vindue. Et spil
+regnes som lukket, når det mangler to scanninger i træk (5–10 sekunder), og vises der en øvelse fra en pause i
+spillet, forsvinder den.
 
 ### 2. Er der en pause?
 

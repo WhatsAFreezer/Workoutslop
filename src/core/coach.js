@@ -48,6 +48,9 @@ class Coach {
       return [];
     }
 
+    // Spillet er lukket: en øvelse fra en pause i spillet forsvinder.
+    if (pause.state === 'noGame' && c.trigger === 'pause') return this.finish(now, 'missed');
+
     if (pause.state === 'pause') {
       c.sawPause = true;
       c.activeSince = null;

@@ -32,11 +32,11 @@ const {
   KNOWN_GAMES,
   customGamesToDefinitions,
   autoGamesToDefinitions,
-  detectGame,
+  GameDetector,
   selectableProcesses,
   normalizeProcessName,
 } = require('../core/games');
-const { GameFinder, isGameFocused } = require('../core/game-detection');
+const { GameFinder, isGameFocused, isKnownNonGame } = require('../core/game-detection');
 const { INTEGRATIONS, parseGsiPayload } = require('../core/gsi');
 const { normalizeSettings } = require('../core/settings');
 const { PauseDetector } = require('../core/pause-detector');
@@ -124,6 +124,7 @@ const focus = {
   gameFullscreen: false, // fylder spillet hele skærmen?
 };
 const gameFinder = new GameFinder();
+const gameDetector = new GameDetector();
 
 const pauseDetector = new PauseDetector();
 const gamepads = new GamepadActivity();
@@ -194,7 +195,16 @@ async function scanProcesses() {
   scanning = true;
   lastScanAt = Date.now();
   try {
-    detected = detectGame(await listProcesses(), allGames());
+    const processes = await listProcesses();
+    if (processes.length === 0) return; // kunne ikke læses – behold det, vi ved
+    // Kun Windows: hvilke af processerne har et synligt vindue?
+    const pids = windowsNative.visibleWindowPids();
+    const windowed = pids && processes.filter((p) => pids.has(p.pid)).map((p) => p.name);
+    detected = gameDetector.update(
+      processes.map((p) => p.name),
+      allGames(),
+      windowed,
+    );
   } finally {
     scanning = false;
   }
@@ -543,7 +553,12 @@ function overviewStatus() {
 
   const signals = [];
   const kind = definition?.custom ? 'tilføjet af dig' : definition?.auto ? 'fundet automatisk' : 'kendt spil';
-  signals.push({ label: 'Spil', value: game ? `${game.name} (${kind})` : 'Intet spil kører' });
+  signals.push({
+    label: 'Spil',
+    value: game ? `${game.name} (${kind})` : 'Intet spil kører',
+    // Et automatisk fundet program, der ikke er et spil, kan fjernes direkte herfra.
+    action: game && definition?.auto ? { label: 'Ikke et spil', process: definition.processes[0] } : null,
+  });
   if (game) {
     const source = lastPause.source in PAUSE_SIGNALS ? lastPause.source : 'idle';
     signals.push({ label: 'Pauser findes ved', value: PAUSE_SIGNALS[source](game.name) });
@@ -897,7 +912,7 @@ function registerIpc() {
 
   ipcMain.handle('setup:processes', async (event) => {
     if (!fromSetup(event)) return [];
-    return selectableProcesses(await listProcesses());
+    return selectableProcesses((await listProcesses()).map((p) => p.name));
   });
 
   ipcMain.handle('setup:install-integration', async (event, id) => {
@@ -1045,6 +1060,10 @@ function start() {
   settings = store.settings;
   if (!settings.gsiToken)
     settings = store.saveSettings({ ...settings, gsiToken: crypto.randomBytes(16).toString('hex') });
+  // Ældre versioner kunne tilføje værktøjer som Wallpaper Engine som spil.
+  const realGames = settings.autoGames.filter((g) => !isKnownNonGame(g));
+  if (realGames.length !== settings.autoGames.length)
+    settings = store.saveSettings({ ...settings, autoGames: realGames });
   coach.lastCompletedAt = engine.lastCompletedAt(store.history);
   updater = createUpdater({ onChange: onUpdateStatus, beforeInstall: markUpdating });
   const justUpdated = readUpdateMarker();

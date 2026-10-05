@@ -971,6 +971,12 @@ button:focus-visible {
 .signals dd.warn {
   color: var(--warn);
 }
+.signal-action {
+  display: block;
+  margin-top: 6px;
+  padding: 3px 9px;
+  font-size: 12px;
+}
 .ov-hero {
   margin: 4px 0 14px;
   font-size: 14px;

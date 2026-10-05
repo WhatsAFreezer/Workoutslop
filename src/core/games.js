@@ -79,14 +79,70 @@ function detectGame(processNames, games) {
   return null;
 }
 
-// Windows: `tasklist /fo csv /nh` giver linjer som "cs2.exe","1234","Console",...
-function parseTasklistCsv(output) {
-  const names = [];
-  for (const line of String(output).split(/\r?\n/)) {
-    const match = /^"([^"]+)"/.exec(line.trim());
-    if (match) names.push(match[1]);
+const gameKey = (game) => game.processes.map(normalizeProcessName).join('|');
+
+// Holder styr på, hvilket spil der kører, på tværs af scanningerne:
+//
+//  - Mange spil lukker vinduet, før processen er helt lukket – og nogle bliver
+//    liggende i baggrunden. Har vi set spillet med et synligt vindue, tæller det
+//    derfor kun som åbent, så længe det stadig har et.
+//  - Et spil regnes først som lukket, når det mangler i to scanninger i træk, så
+//    et enkelt mislykket opslag eller et vindue der genskabes, ikke afbryder.
+class GameDetector {
+  constructor({ missesBeforeClosed = 2 } = {}) {
+    this.missesBeforeClosed = missesBeforeClosed;
+    this.hadWindow = new Set();
+    this.last = null;
+    this.misses = 0;
   }
-  return names;
+
+  // windowed: navnene på processer med et synligt vindue – eller null, hvis det
+  // ikke kan afgøres (så bruges kun proceslisten). Returnerer { game, phase } eller null.
+  update(processNames, games, windowed = null) {
+    const isRunning = createProcessMatcher(processNames);
+    const hasWindow = windowed ? createProcessMatcher([...windowed]) : null;
+    const open = games.filter((game) => {
+      const key = gameKey(game);
+      if (!game.processes.some(isRunning)) {
+        this.hadWindow.delete(key);
+        return false;
+      }
+      if (!hasWindow) return true;
+      if (game.processes.some(hasWindow)) {
+        this.hadWindow.add(key);
+        return true;
+      }
+      return !this.hadWindow.has(key); // vinduet er lukket – spillet er ved at lukke ned
+    });
+
+    const found = detectGame(processNames, open);
+    if (found) {
+      this.last = found;
+      this.misses = 0;
+      return found;
+    }
+    // Et spil der er fjernet fra listen (fx "Ikke et spil"), forsvinder med det samme.
+    const stillListed = this.last && games.some((g) => gameKey(g) === gameKey(this.last.game));
+    if (stillListed && ++this.misses < this.missesBeforeClosed) return this.last;
+    this.last = null;
+    this.misses = 0;
+    return null;
+  }
+}
+
+// Windows: `tasklist /fo csv /nh` giver linjer som "cs2.exe","1234","Console",...
+// Returnerer [{ name, pid }].
+function parseTasklistEntries(output) {
+  const entries = [];
+  for (const line of String(output).split(/\r?\n/)) {
+    const match = /^"([^"]+)","(\d+)"/.exec(line.trim()) || /^"([^"]+)"/.exec(line.trim());
+    if (match) entries.push({ name: match[1], pid: match[2] ? Number(match[2]) : null });
+  }
+  return entries;
+}
+
+function parseTasklistCsv(output) {
+  return parseTasklistEntries(output).map((e) => e.name);
 }
 
 // macOS/Linux: `ps -A -o comm=` giver ét navn (eller en sti) pr. linje.
@@ -163,6 +219,8 @@ module.exports = {
   customGamesToDefinitions,
   autoGamesToDefinitions,
   detectGame,
+  GameDetector,
+  parseTasklistEntries,
   parseTasklistCsv,
   parsePsOutput,
   selectableProcesses,

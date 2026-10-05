@@ -9,6 +9,8 @@
 //  - Forgrundsvinduet (GetForegroundWindow m.fl.): hvilket program der er aktivt,
 //    hvor dets vindue er, og om det fylder hele skærmen.
 //  - SetWindowPos: lægger overlayet øverst igen, hvis et spil har lagt sig ovenpå.
+//  - EnumWindows: hvilke programmer der har et synligt vindue. Mange spil lukker
+//    vinduet, før processen er helt lukket (eller bliver liggende i baggrunden).
 //
 // På andre styresystemer – eller hvis noget fejler – returneres null, og appen
 // fortsætter uden funktionen.
@@ -23,6 +25,8 @@ const HWND_TOPMOST = -1;
 const SWP_NOSIZE = 0x0001;
 const SWP_NOMOVE = 0x0002;
 const SWP_NOACTIVATE = 0x0010;
+const GWL_STYLE = -16;
+const WS_CAPTION = 0x00c00000; // titellinje – et almindeligt (evt. maksimeret) vindue
 
 let native; // undefined = ikke forsøgt endnu, null = ikke tilgængelig
 
@@ -81,6 +85,7 @@ function load() {
       ),
       GetWindowRect: user32.func('int __stdcall GetWindowRect(intptr_t hWnd, _Out_ RECT *lpRect)'),
       IsIconic: user32.func('int __stdcall IsIconic(intptr_t hWnd)'),
+      GetWindowLongPtrW: user32.func('intptr_t __stdcall GetWindowLongPtrW(intptr_t hWnd, int nIndex)'),
       MonitorFromWindow: user32.func('intptr_t __stdcall MonitorFromWindow(intptr_t hwnd, uint32 dwFlags)'),
       GetMonitorInfoW: user32.func('int __stdcall GetMonitorInfoW(intptr_t hMonitor, _Inout_ MONITORINFO *lpmi)'),
       SetWindowPos: user32.func(
@@ -93,6 +98,15 @@ function load() {
         'int __stdcall QueryFullProcessImageNameW(intptr_t hProcess, uint32 dwFlags, _Out_ uint8 *lpExeName, _Inout_ uint32 *lpdwSize)',
       ),
       CloseHandle: kernel32.func('int __stdcall CloseHandle(intptr_t hObject)'),
+    };
+  });
+
+  result.enumWindows = tryLoad(() => {
+    const user32 = koffi.load('user32.dll');
+    koffi.proto('int __stdcall EnumWindowsProc(intptr_t hwnd, intptr_t lParam)');
+    return {
+      EnumWindows: user32.func('int __stdcall EnumWindows(EnumWindowsProc *lpEnumFunc, intptr_t lParam)'),
+      IsWindowVisible: user32.func('int __stdcall IsWindowVisible(intptr_t hWnd)'),
     };
   });
 
@@ -156,8 +170,11 @@ function foregroundWindow() {
   const monitorHandle = Number(win.MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST));
   const monitor = monitorHandle && win.GetMonitorInfoW(monitorHandle, info) ? info.rcMonitor : null;
   const minimized = Boolean(win.IsIconic(hwnd));
+  // Et maksimeret vindue med titellinje fylder også skærmen, men er ikke fuldskærm.
+  const hasCaption = (Number(win.GetWindowLongPtrW(hwnd, GWL_STYLE)) & WS_CAPTION) === WS_CAPTION;
   const coversMonitor =
     !minimized &&
+    !hasCaption &&
     monitor != null &&
     rect.left <= monitor.left &&
     rect.top <= monitor.top &&
@@ -165,6 +182,29 @@ function foregroundWindow() {
     rect.bottom >= monitor.bottom;
 
   return { pid: pid[0], path: processPath(win, pid[0]), rect, monitor, minimized, coversMonitor };
+}
+
+// Proces-id'er for alle programmer med et synligt vindue (også minimerede) – eller null.
+function visibleWindowPids() {
+  const api = load();
+  const win = api?.window;
+  const list = api?.enumWindows;
+  if (!win || !list) return null;
+  const pids = new Set();
+  const rect = {};
+  const pid = [0];
+  const ok = tryLoad(() =>
+    list.EnumWindows((handle) => {
+      const hwnd = Number(handle);
+      if (!list.IsWindowVisible(hwnd) || !win.GetWindowRect(hwnd, rect)) return 1;
+      if (rect.right - rect.left <= 0 || rect.bottom - rect.top <= 0) return 1;
+      pid[0] = 0;
+      win.GetWindowThreadProcessId(hwnd, pid);
+      if (pid[0]) pids.add(pid[0]);
+      return 1; // fortsæt
+    }, 0),
+  );
+  return ok ? pids : null;
 }
 
 // Lægger et vindue øverst blandt "altid øverst"-vinduer uden at give det fokus.
@@ -182,6 +222,7 @@ function capabilities() {
     gamepads: Boolean(api?.getState),
     fullscreenDetection: Boolean(api?.notificationState),
     foregroundWindow: Boolean(api?.window),
+    windowList: Boolean(api?.window && api?.enumWindows),
   };
 }
 
@@ -191,6 +232,7 @@ module.exports = {
   notificationState,
   isExclusiveFullscreen,
   foregroundWindow,
+  visibleWindowPids,
   bringToTop,
   capabilities,
 };

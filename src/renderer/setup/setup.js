@@ -592,7 +592,20 @@
     $('ov-signals').replaceChildren(
       ...status.signals.flatMap((signal) => [
         el('dt', { text: signal.label }),
-        el('dd', { class: signal.warn ? 'warn' : '', text: signal.value }),
+        el('dd', { class: signal.warn ? 'warn' : '' }, [
+          signal.value,
+          signal.action &&
+            el('button', {
+              type: 'button',
+              class: 'btn small ghost signal-action',
+              text: signal.action.label,
+              onclick: async () => {
+                data.games = await api.updateGames('remove', signal.action.process);
+                renderFoundGames();
+                refreshOverview();
+              },
+            }),
+        ]),
       ]),
     );
 

@@ -81,6 +81,28 @@ test('ved inaktivitets-pauser gøres overlayet først lille efter et stykke tids
   );
 });
 
+test('lukker man spillet, forsvinder øvelsen fra pausen', () => {
+  const noGame = { state: 'noGame', source: 'none', reason: 'Intet spil kører', game: null };
+  for (const source of ['idle', 'focus', 'integration']) {
+    const { coach } = makeCoach();
+    coach.tick({ now: 0, pause: pause(source), idleSeconds: 99, settings });
+    assert.ok(coach.current);
+    const cmds = coach.tick({ now: 5000, pause: noGame, idleSeconds: 0, settings });
+    assert.deepEqual(types(cmds), ['record', 'hide'], source);
+    assert.equal(cmds[0].entry.status, 'missed');
+    assert.equal(coach.current, null);
+    // Og der kommer ingen nye øvelser, mens intet spil kører.
+    assert.deepEqual(coach.tick({ now: 99 * MINUTE, pause: noGame, idleSeconds: 999, settings }), []);
+  }
+
+  // Også den lille udgave forsvinder med det samme.
+  const { coach } = makeCoach();
+  coach.tick({ now: 0, pause: pause(), idleSeconds: 0, settings });
+  coach.tick({ now: 1000, pause: playing(), idleSeconds: 0, settings });
+  assert.equal(coach.current.mode, 'compact');
+  assert.deepEqual(types(coach.tick({ now: 2000, pause: noGame, idleSeconds: 0, settings })), ['record', 'hide']);
+});
+
 test('øvelser man selv beder om bliver stående', () => {
   const { coach, calls } = makeCoach();
   assert.deepEqual(types(coach.requestNow(0)), ['show']);

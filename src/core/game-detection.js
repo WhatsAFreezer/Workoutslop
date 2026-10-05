@@ -80,13 +80,68 @@ const NOT_GAMES = new Set(
     'code',
     'devenv',
     'workoutslop',
+    // Programmer fra Steam, der ikke er spil – og ofte kører i baggrunden hele tiden.
+    'wallpaper32',
+    'wallpaper64',
+    'webwallpaper32',
+    'losslessscaling',
+    'vrserver',
+    'vrmonitor',
+    'vrcompositor',
+    'vrdashboard',
+    'vrwebhelper',
+    'vrstartup',
+    'soundpad',
+    'bongocat',
+    'vtube studio',
+    'blender',
+    'aseprite',
+    'krita',
   ].map((n) => n.toLowerCase()),
 );
+
+// Mapper i et spilbibliotek, der indeholder værktøjer i stedet for spil
+// (sammenlignet uden mellemrum, bindestreger og understreger).
+const NOT_GAME_FOLDERS = new Set([
+  'wallpaperengine',
+  'losslessscaling',
+  'steamvr',
+  'soundpad',
+  'vtubestudio',
+  'obsstudio',
+  'steamworksshared',
+  'blender',
+  'aseprite',
+  'krita',
+  'bongocat',
+  'banana',
+  'desktopmate',
+  'fpsvr',
+  'ovrtoolkit',
+  'ovradvancedsettings',
+  'xsoverlay',
+  'voicemod',
+]);
+
+const folderKey = (name) =>
+  String(name)
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
 
 const basename = (path) => String(path).split(/[\\/]/).pop();
 
 function prettyName(raw) {
   return raw.replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function isNotGame(path) {
+  return NOT_GAMES.has(normalizeProcessName(basename(path)));
+}
+
+// Et automatisk fundet spil ({ name, process }), som vi ved ikke er et spil –
+// fx Wallpaper Engine, der også ligger i Steam-biblioteket.
+function isKnownNonGame(game) {
+  return isNotGame(game.process) || NOT_GAME_FOLDERS.has(folderKey(game.name));
 }
 
 // Et spil fra et spilbibliotek: { name, process } – ellers null.
@@ -96,13 +151,11 @@ function gameFromPath(path) {
   if (HELPER_PATTERN.test(exe)) return null;
   for (const pattern of LIBRARY_PATTERNS) {
     const match = pattern.exec(path);
-    if (match) return { name: prettyName(match[1]), process: exe };
+    if (!match) continue;
+    const game = { name: prettyName(match[1]), process: exe };
+    return isKnownNonGame(game) ? null : game;
   }
   return null;
-}
-
-function isNotGame(path) {
-  return NOT_GAMES.has(normalizeProcessName(basename(path)));
 }
 
 // Følger programmet i forgrunden over tid. update() kaldes hvert sekund og
@@ -127,7 +180,9 @@ class GameFinder {
     const libraryGame = gameFromPath(foreground.path);
     if (libraryGame) return { added: libraryGame };
 
-    if (!foreground.coversMonitor || isNotGame(foreground.path) || HELPER_PATTERN.test(exe)) {
+    // Værktøjer fra et spilbibliotek (fx Wallpaper Engine) foreslås heller ikke.
+    const inLibrary = LIBRARY_PATTERNS.some((pattern) => pattern.test(foreground.path));
+    if (inLibrary || !foreground.coversMonitor || isNotGame(foreground.path) || HELPER_PATTERN.test(exe)) {
       this.fullscreenSince.delete(key);
       return null;
     }
@@ -147,4 +202,4 @@ function isGameFocused(game, foreground) {
   return game.processes.some((p) => normalizeProcessName(p) === exe);
 }
 
-module.exports = { LIBRARY_PATTERNS, gameFromPath, isNotGame, GameFinder, isGameFocused };
+module.exports = { LIBRARY_PATTERNS, gameFromPath, isNotGame, isKnownNonGame, GameFinder, isGameFocused };
