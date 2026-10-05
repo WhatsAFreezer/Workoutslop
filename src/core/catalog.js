@@ -60,7 +60,7 @@ const DEFAULT_SETS_PER_DAY = {
 const MAX_SETS_PER_DAY = 10;
 
 // Det brugeren kan vælge at træne. Flere kan kombineres, fx "Bryst & skuldre" + "Arme".
-// En øvelse hører til et område via sin muskelgruppe (groups) eller via `extraFocus`.
+// En øvelse hører til et område via sin muskelgruppe (groups) eller via `extraGroups` (se exercises.js).
 const FOCUS_AREAS = [
   {
     id: 'chestShoulders',

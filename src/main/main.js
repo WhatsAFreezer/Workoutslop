@@ -497,9 +497,10 @@ function contextLabel(current) {
   return current.gameName ? `Pause · ${current.gameName}` : 'Pause registreret';
 }
 
-// "sæt 2 af 3 i dag" for øvelsens muskelgruppe.
-function setProgressText(exercise, activeSettings) {
-  const group = engine.dailyPlan(EXERCISES, activeSettings, store.history, Date.now()).perGroup[exercise.muscleGroup];
+// "sæt 2 af 3 i dag" for den muskelgruppe, øvelsen tæller under.
+function setProgressText(suggestion, activeSettings) {
+  const id = suggestion.group ?? engine.groupFor(suggestion.exercise, activeSettings.focus);
+  const group = engine.dailyPlan(EXERCISES, activeSettings, store.history, Date.now()).perGroup[id];
   if (!group || group.target === 0) return '';
   return group.done < group.target ? `sæt ${group.done + 1} af ${group.target} i dag` : 'ekstra sæt';
 }
@@ -551,7 +552,7 @@ function overlayPayload(current, fresh) {
       steps: ex.steps,
       tip: ex.tip,
       animation: ex.animation,
-      muscleGroup: MUSCLE_GROUPS[ex.muscleGroup],
+      muscleGroup: MUSCLE_GROUPS[suggestion.group ?? ex.muscleGroup],
       equipment: equipmentNames(ex),
     },
     amount: suggestion.amount,
@@ -559,7 +560,7 @@ function overlayPayload(current, fresh) {
     adjustText: adjustText(suggestion),
     canEase: engine.easierSuggestion(suggestion) != null,
     sinceText: engine.describeTimeSince(suggestion.minutesSinceLast),
-    setText: setProgressText(ex, current.settingsOverride || settings),
+    setText: setProgressText(suggestion, current.settingsOverride || settings),
     hotkeys: { done: hotkeyLabel('done'), hide: hotkeyLabel('hide') },
     snoozeMinutes: SNOOZE_MINUTES,
     sound: settings.sound,
@@ -1156,7 +1157,7 @@ function registerIpc() {
         name: MUSCLE_GROUPS[group],
         sets: draftValues.setsPerDay[group],
         exercises: candidates
-          .filter((ex) => ex.muscleGroup === group)
+          .filter((ex) => engine.groupFor(ex, draftValues.focus) === group)
           .map((ex) => {
             const { amount } = engine.computeAmount(ex, draftValues.level, null);
             return {

@@ -343,3 +343,33 @@ test('"For hårdt" sætter mængden ned, men aldrig under minimum', () => {
   assert.equal(engine.easierSuggestion(seconds).amount, 20);
   assert.equal(engine.easierSuggestion({ exercise: byId('plank'), amount: 10 }), null);
 });
+
+test('fokus: øvelser vises og tælles under en muskelgruppe i det valgte fokus', () => {
+  const { FOCUS_AREAS } = require('../src/core/catalog');
+  const all = ['dumbbells', 'kettlebell', 'bench', 'pullupBar', 'resistanceBand', 'barbell'];
+  // Med ét fokus ad gangen havner alle øvelser i en gruppe, der hører til fokus.
+  for (const area of FOCUS_AREAS) {
+    for (const level of [1, 2, 3, 4]) {
+      const settings = { level, equipment: all, focus: [area.id] };
+      for (const ex of engine.availableExercises(EXERCISES, settings)) {
+        const group = engine.groupFor(ex, settings.focus);
+        assert.ok(area.groups.includes(group), `${area.name}: ${ex.name} vises under ${group}`);
+      }
+    }
+  }
+  assert.equal(engine.groupFor(byId('pullup'), ['arms']), 'biceps');
+  assert.equal(engine.groupFor(byId('deadHang'), ['arms']), 'forearms');
+  assert.equal(engine.groupFor(byId('diamondPushup'), ['chestShoulders']), 'chest');
+  assert.equal(engine.groupFor(byId('birdDog'), ['backPosture']), 'back');
+  // Er øvelsens egen gruppe med i fokus – eller er der intet fokus – bruges den.
+  assert.equal(engine.groupFor(byId('pullup'), ['arms', 'backPosture']), 'back');
+  assert.equal(engine.groupFor(byId('diamondPushup'), ['chestShoulders', 'arms']), 'triceps');
+  assert.equal(engine.groupFor(byId('pullup'), []), 'back');
+
+  // Sættet gemmes under den gruppe, det tæller under, og dagens plan bruger det.
+  const settings = { level: 3, equipment: ['pullupBar'], focus: ['arms'], setsPerDay: { biceps: 2, forearms: 1 } };
+  const plan = engine.dailyPlan(EXERCISES, settings, [], 0);
+  assert.deepEqual(Object.keys(plan.perGroup).sort(), ['biceps', 'forearms']);
+  const s = engine.createSuggestion({ exercises: [byId('pullup')], settings, history: [], now: 0 });
+  assert.equal(s.group, 'biceps');
+});
