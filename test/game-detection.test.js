@@ -52,34 +52,90 @@ test('værktøjer fra Steam (fx Wallpaper Engine) er ikke spil', () => {
   );
 });
 
-test('GameFinder tilføjer biblioteksspil med det samme og foreslår fuldskærmsprogrammer efter et stykke tid', () => {
+// Kalder finder.update hvert sekund fra `from` til `to` (ms) og returnerer det sidste svar.
+function run(finder, fg, from, to, options = {}) {
+  let result = null;
+  for (let t = from; t <= to; t += 1000) {
+    const r = finder.update(fg, t, () => false, typeof options === 'function' ? options(t) : options);
+    if (r) result = r;
+  }
+  return result;
+}
+
+test('GameFinder tilføjer biblioteksspil med det samme', () => {
   const finder = new GameFinder({ fullscreenSeconds: 20 });
-  const unknown = () => false;
   const steam = { path: 'D:\\steamapps\\common\\Celeste\\Celeste.exe', coversMonitor: false };
-  assert.deepEqual(finder.update(steam, 0, unknown), { added: { name: 'Celeste', process: 'Celeste.exe' } });
-
-  const fullscreen = { path: 'C:\\Games\\Indie\\IndieGame.exe', coversMonitor: true };
-  assert.equal(finder.update(fullscreen, 0, unknown), null);
-  assert.equal(finder.update(fullscreen, 10000, unknown), null);
-  assert.deepEqual(finder.update(fullscreen, 20000, unknown), {
-    suggested: { name: 'IndieGame', process: 'IndieGame.exe' },
-  });
-
-  // Ikke i fuld skærm hele tiden = starter forfra.
-  const finder2 = new GameFinder({ fullscreenSeconds: 20 });
-  finder2.update(fullscreen, 0, unknown);
-  finder2.update({ ...fullscreen, coversMonitor: false }, 10000, unknown);
-  assert.equal(finder2.update(fullscreen, 20000, unknown), null);
-
+  assert.deepEqual(
+    finder.update(steam, 0, () => false),
+    { added: { name: 'Celeste', process: 'Celeste.exe' } },
+  );
   // Kendte eller afviste programmer ignoreres.
   assert.equal(
     finder.update(steam, 0, () => true),
     null,
   );
-  // Browser i fuld skærm foreslås aldrig.
-  const browser = { path: 'C:\\x\\chrome.exe', coversMonitor: true };
-  finder.update(browser, 0, unknown);
-  assert.equal(finder.update(browser, 60000, unknown), null);
+});
+
+test('et program i fuld skærm, hvor man hele tiden er aktiv, er et spil', () => {
+  const fullscreen = { path: 'C:\\Games\\Indie\\IndieGame.exe', coversMonitor: true };
+  const game = { name: 'IndieGame', process: 'IndieGame.exe' };
+  // Aktiv næsten hele tiden (input inden for det sidste sekund).
+  const finder = new GameFinder({ fullscreenSeconds: 20 });
+  assert.equal(run(finder, fullscreen, 0, 19000, { idleSeconds: 0 }), null);
+  assert.deepEqual(
+    finder.update(fullscreen, 20000, () => false, { idleSeconds: 1 }),
+    { added: game },
+  );
+
+  // En film i fuld skærm: ingen input. Den bliver kun foreslået.
+  const movie = new GameFinder({ fullscreenSeconds: 20 });
+  assert.deepEqual(run(movie, fullscreen, 0, 20000, { idleSeconds: 60 }), { suggested: game });
+
+  // Lidt aktivitet en gang imellem (fx en præsentation) er heller ikke nok.
+  const slides = new GameFinder({ fullscreenSeconds: 20 });
+  const sometimes = (t) => ({ idleSeconds: t % 10000 === 0 ? 0 : 8 });
+  assert.deepEqual(run(slides, fullscreen, 0, 20000, sometimes), { suggested: game });
+});
+
+test('et program i eksklusiv fuldskærm er et spil efter få sekunder', () => {
+  const finder = new GameFinder({ fullscreenSeconds: 20 });
+  const fg = { path: 'C:\\Games\\Old\\OldGame.exe', coversMonitor: true };
+  assert.equal(
+    finder.update(fg, 0, () => false, { exclusive: true, idleSeconds: 99 }),
+    null,
+  );
+  assert.equal(
+    finder.update(fg, 1000, () => false, { exclusive: true, idleSeconds: 99 }),
+    null,
+  );
+  assert.deepEqual(
+    finder.update(fg, 2000, () => false, { exclusive: true, idleSeconds: 99 }),
+    {
+      added: { name: 'OldGame', process: 'OldGame.exe' },
+    },
+  );
+});
+
+test('fuld skærm skal vare ved, og nogle programmer er aldrig spil', () => {
+  const unknown = () => false;
+  const fullscreen = { path: 'C:\\Games\\Indie\\IndieGame.exe', coversMonitor: true };
+  // Ikke i fuld skærm hele tiden = starter forfra.
+  const finder = new GameFinder({ fullscreenSeconds: 20 });
+  finder.update(fullscreen, 0, unknown, { idleSeconds: 0 });
+  finder.update({ ...fullscreen, coversMonitor: false }, 10000, unknown, { idleSeconds: 0 });
+  assert.equal(finder.update(fullscreen, 20000, unknown, { idleSeconds: 0 }), null);
+
+  // Browsere, terminaler, fjernskrivebord og launchere tæller aldrig – heller ikke i eksklusiv fuldskærm.
+  for (const path of [
+    'C:\\x\\chrome.exe',
+    'C:\\x\\WindowsTerminal.exe',
+    'C:\\Windows\\System32\\mstsc.exe',
+    'C:\\x\\XboxPcApp.exe',
+    'C:\\x\\Playnite.FullscreenApp.exe',
+  ]) {
+    const f = new GameFinder({ fullscreenSeconds: 20 });
+    assert.equal(run(f, { path, coversMonitor: true }, 0, 60000, { idleSeconds: 0, exclusive: true }), null, path);
+  }
 });
 
 test('er spillet i forgrunden?', () => {

@@ -66,10 +66,18 @@ Hvert 5. sekund henter appen listen over kørende programmer (`tasklist` på Win
 sammenligner med en liste over kendte spil, fx `cs2.exe`, `VALORANT-Win64-Shipping.exe` og
 `RocketLeague.exe`.
 
-På Windows ser appen desuden, hvilket program der er i forgrunden. Ligger det i et spilbibliotek (Steam, Epic,
-Riot, Xbox, GOG, Ubisoft, EA eller Rockstar), bliver det automatisk tilføjet som spil. Programmer, der kører i
-fuld skærm i et stykke tid, bliver foreslået som mulige spil under **Spil** i opsætningen. Du kan også selv
-tilføje spil. Værktøjer fra Steam som Wallpaper Engine, Lossless Scaling og SteamVR tælles ikke som spil, og
+På Windows ser appen desuden, hvilket program der er i forgrunden, og tilføjer selv nye spil:
+
+- **Spilbiblioteker:** Ligger programmet i et spilbibliotek (Steam, Epic, Riot, Xbox, GOG, Ubisoft, EA eller
+  Rockstar), er det et spil.
+- **Eksklusiv fuldskærm:** Det bruger næsten kun spil, så et program i eksklusiv fuldskærm er et spil efter 3
+  sekunder.
+- **Fuld skærm + aktivitet:** Fylder et program skærmen i 20 sekunder, mens du bruger mus, tastatur eller
+  controller det meste af tiden, er det et spil. Fylder det skærmen, uden at du rører noget (fx en film), bliver
+  det kun foreslået under **Spil** i opsætningen.
+
+Browsere, videoafspillere, terminaler, fjernskrivebord, kodeprogrammer og spilbutikker tæller aldrig. Du kan
+også selv tilføje spil. Værktøjer fra Steam som Wallpaper Engine, Lossless Scaling og SteamVR tælles ikke som spil, og
 finder appen et program, der ikke er et spil, kan du fjerne det med **Ikke et spil** på oversigten.
 
 **Når du lukker spillet:** Mange spil lukker vinduet, før programmet er helt lukket – og nogle bliver liggende

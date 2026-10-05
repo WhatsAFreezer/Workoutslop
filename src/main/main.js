@@ -152,10 +152,11 @@ function allGames() {
   ];
 }
 
-// Er programmet allerede kendt, tilføjet, foreslået eller afvist?
+// Er programmet allerede kendt, tilføjet eller afvist? (Foreslåede programmer
+// vurderes igen, så de bliver tilføjet, hvis man spiller i dem.)
 function isKnownProcess(exe) {
   const key = normalizeProcessName(exe);
-  const lists = [settings.customGames, settings.autoGames, settings.gameSuggestions];
+  const lists = [settings.customGames, settings.autoGames];
   return (
     settings.ignoredGames.includes(key) ||
     lists.some((list) => list.some((g) => normalizeProcessName(g.process) === key)) ||
@@ -165,17 +166,23 @@ function isKnownProcess(exe) {
 
 // Hvert sekund: hvilket program er i forgrunden? Bruges til at finde nye spil,
 // opdage alt-tab ud af spillet og placere overlayet på spillets skærm.
-function trackForeground(now) {
+function trackForeground(now, idleSeconds) {
   const fg = windowsNative.foregroundWindow();
   // Vores eget overlay/vindue i forgrunden ændrer ikke på, hvad spillet gør.
   if (!fg || fg.pid === process.pid) return;
   focus.foreground = fg;
 
-  const found = gameFinder.update(fg, now, isKnownProcess);
+  const exclusive = fg.coversMonitor && windowsNative.notificationState() === 'exclusive';
+  const found = gameFinder.update(fg, now, isKnownProcess, { idleSeconds, exclusive });
+  const same = (game) => (g) => normalizeProcessName(g.process) === normalizeProcessName(game.process);
   if (found?.added) {
-    settings = store.saveSettings({ ...settings, autoGames: [...settings.autoGames, found.added] });
+    settings = store.saveSettings({
+      ...settings,
+      autoGames: [...settings.autoGames, found.added],
+      gameSuggestions: settings.gameSuggestions.filter((g) => !same(found.added)(g)),
+    });
     scanProcesses();
-  } else if (found?.suggested) {
+  } else if (found?.suggested && !settings.gameSuggestions.some(same(found.suggested))) {
     settings = store.saveSettings({ ...settings, gameSuggestions: [...settings.gameSuggestions, found.suggested] });
   }
 
@@ -220,10 +227,10 @@ function tick() {
   const now = Date.now();
   if (now - lastScanAt >= PROCESS_SCAN_MS) scanProcesses();
 
-  trackForeground(now);
-
   // Windows tæller ikke controller-input som aktivitet, så vi bruger det korteste af de to.
   const idleSeconds = Math.min(powerMonitor.getSystemIdleTime(), gamepads.idleSeconds(now));
+  trackForeground(now, idleSeconds);
+
   const game = detected?.game ?? null;
   const backgroundSeconds =
     game && focus.gameFocused === false && focus.backgroundSince != null ? (now - focus.backgroundSince) / 1000 : null;

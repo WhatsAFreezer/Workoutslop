@@ -5,8 +5,10 @@
 //
 //  - Programmer installeret i en spilbutiks bibliotek (Steam, Epic, Riot, Xbox,
 //    GOG, Ubisoft, EA, Rockstar) er spil. De tilføjes automatisk.
-//  - Andre programmer der kører i fuld skærm i et stykke tid, er måske spil.
-//    De bliver foreslået i opsætningen, så brugeren selv kan vælge.
+//  - Programmer i eksklusiv fuldskærm er spil (det bruger næsten kun spil).
+//  - Programmer der fylder skærmen i et stykke tid, mens man hele tiden bruger
+//    mus, tastatur eller controller, er spil. Fylder et program skærmen, uden at
+//    man rører noget (fx en film), bliver det kun foreslået i opsætningen.
 
 const { normalizeProcessName } = require('./games');
 
@@ -80,6 +82,80 @@ const NOT_GAMES = new Set(
     'code',
     'devenv',
     'workoutslop',
+    // Flere programmer, der kan køre i fuld skærm, mens man bruger tastatur og mus.
+    'chromium',
+    'zen',
+    'floorp',
+    'librewolf',
+    'waterfox',
+    'thorium',
+    'msedgewebview2',
+    'mpv',
+    'kodi',
+    'plex',
+    'plex htpc',
+    'stremio',
+    'photos',
+    'microsoft.photos',
+    'windowsterminal',
+    'wt',
+    'cmd',
+    'powershell',
+    'pwsh',
+    'mstsc',
+    'msrdc',
+    'vmware',
+    'vmware-vmx',
+    'virtualboxvm',
+    'vmconnect',
+    'anydesk',
+    'teamviewer',
+    'rustdesk',
+    'idea64',
+    'pycharm64',
+    'webstorm64',
+    'rider64',
+    'clion64',
+    'goland64',
+    'phpstorm64',
+    'studio64',
+    'cursor',
+    'windsurf',
+    'zed',
+    'sublime_text',
+    'notepad',
+    'notepad++',
+    'obsidian',
+    'notion',
+    'figma',
+    'photoshop',
+    'illustrator',
+    'afterfx',
+    'adobe premiere pro',
+    'resolve',
+    'unity',
+    'unrealeditor',
+    'whatsapp',
+    'telegram',
+    'signal',
+    'thunderbird',
+    'chatgpt',
+    'claude',
+    'taskmgr',
+    'snippingtool',
+    'screenclippinghost',
+    // Spilbutikker og launchere er ikke selv spil.
+    'xboxpcapp',
+    'xboxapp',
+    'overwolf',
+    'playnite.fullscreenapp',
+    'playnite.desktopapp',
+    'eadesktop',
+    'upc',
+    'ubisoftconnect',
+    'galaxyclient',
+    'riotclientservices',
+    'amazon games ui',
     // Programmer fra Steam, der ikke er spil – og ofte kører i baggrunden hele tiden.
     'wallpaper32',
     'wallpaper64',
@@ -158,40 +234,62 @@ function gameFromPath(path) {
   return null;
 }
 
+// Under så mange sekunder siden sidste input (mus, tastatur, controller) er brugeren aktiv.
+const ACTIVE_IDLE_SECONDS = 2;
+// Så mange sekunder i træk i eksklusiv fuldskærm, før programmet regnes som et spil.
+const EXCLUSIVE_SECONDS = 3;
+
 // Følger programmet i forgrunden over tid. update() kaldes hvert sekund og
-// returnerer { added, suggested } når der er fundet noget nyt.
+// returnerer { added } eller { suggested }, når der er fundet noget nyt.
 class GameFinder {
-  constructor({ fullscreenSeconds = 20 } = {}) {
+  // fullscreenSeconds: så længe skal et program fylde skærmen, før det vurderes.
+  // activeShare: så stor en del af tiden skal brugeren have været aktiv, for at
+  // det regnes som et spil. En film ser man uden at røre mus og tastatur.
+  constructor({ fullscreenSeconds = 20, activeShare = 0.6 } = {}) {
     this.fullscreenSeconds = fullscreenSeconds;
-    this.fullscreenSince = new Map(); // procesnavn -> tidspunkt
+    this.activeShare = activeShare;
+    this.watching = new Map(); // procesnavn -> { since, samples, active, exclusive }
   }
 
   // known(processName) skal returnere true for spil, der allerede er kendt,
-  // tilføjet, foreslået eller ignoreret.
-  update(foreground, now, known) {
+  // tilføjet eller afvist. idleSeconds: sekunder siden sidste input.
+  // exclusive: kører forgrundsprogrammet i eksklusiv fuldskærm?
+  update(foreground, now, known, { idleSeconds = Infinity, exclusive = false } = {}) {
     if (!foreground?.path) return null;
     const exe = basename(foreground.path);
     const key = normalizeProcessName(exe);
     if (known(exe)) {
-      this.fullscreenSince.delete(key);
+      this.watching.delete(key);
       return null;
     }
 
     const libraryGame = gameFromPath(foreground.path);
     if (libraryGame) return { added: libraryGame };
 
-    // Værktøjer fra et spilbibliotek (fx Wallpaper Engine) foreslås heller ikke.
+    // Værktøjer fra et spilbibliotek (fx Wallpaper Engine) tæller heller ikke.
     const inLibrary = LIBRARY_PATTERNS.some((pattern) => pattern.test(foreground.path));
     if (inLibrary || !foreground.coversMonitor || isNotGame(foreground.path) || HELPER_PATTERN.test(exe)) {
-      this.fullscreenSince.delete(key);
+      this.watching.delete(key);
       return null;
     }
-    if (!this.fullscreenSince.has(key)) this.fullscreenSince.set(key, now);
-    if (now - this.fullscreenSince.get(key) >= this.fullscreenSeconds * 1000) {
-      this.fullscreenSince.delete(key);
-      return { suggested: { name: prettyName(exe.replace(/\.exe$/i, '')), process: exe } };
+
+    let w = this.watching.get(key);
+    if (!w) {
+      w = { since: now, samples: 0, active: 0, exclusive: 0 };
+      this.watching.set(key, w);
     }
-    return null;
+    w.samples++;
+    if (idleSeconds < ACTIVE_IDLE_SECONDS) w.active++;
+    w.exclusive = exclusive ? w.exclusive + 1 : 0;
+
+    const game = { name: prettyName(exe.replace(/\.exe$/i, '')), process: exe };
+    if (w.exclusive >= EXCLUSIVE_SECONDS) {
+      this.watching.delete(key);
+      return { added: game };
+    }
+    if (now - w.since < this.fullscreenSeconds * 1000) return null;
+    this.watching.delete(key);
+    return w.active / w.samples >= this.activeShare ? { added: game } : { suggested: game };
   }
 }
 
