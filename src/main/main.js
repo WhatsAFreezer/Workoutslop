@@ -912,6 +912,7 @@ function registerIpc() {
               enabled: !draftValues.disabledExercises.includes(ex.id),
               animation: ex.animation,
               steps: ex.steps,
+              difficulty: ex.difficulty,
             };
           }),
       }))

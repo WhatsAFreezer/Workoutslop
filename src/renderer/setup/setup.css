@@ -880,6 +880,52 @@ button:focus-visible {
   color: var(--accent);
   font-weight: 600;
 }
+.ex-preview-level {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 2px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.ex-preview-label {
+  color: var(--muted);
+  font-weight: 400;
+}
+.difficulty-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+.difficulty-bars i {
+  width: 5px;
+  border-radius: 2px;
+  background: var(--panel-3);
+}
+.difficulty-bars i:nth-child(1) {
+  height: 7px;
+}
+.difficulty-bars i:nth-child(2) {
+  height: 10px;
+}
+.difficulty-bars i:nth-child(3) {
+  height: 13px;
+}
+.ex-preview-level[data-level='1'] {
+  --level: var(--accent);
+}
+.ex-preview-level[data-level='2'] {
+  --level: var(--warn);
+}
+.ex-preview-level[data-level='3'] {
+  --level: var(--danger);
+}
+.difficulty-bars i.on {
+  background: var(--level);
+}
+.ex-preview-level > span:last-child {
+  color: var(--level);
+}
 .ex-preview ol {
   margin: 6px 0 0;
   padding-left: 20px;

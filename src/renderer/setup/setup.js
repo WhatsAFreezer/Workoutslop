@@ -216,6 +216,7 @@
 
   // --- Trin 4: øvelser og sæt -----------------------------------------------------
 
+  const DIFFICULTY_NAMES = { 1: 'Let', 2: 'Middel', 3: 'Svær' };
   const setsLabel = (n) => (n === 0 ? 'Trænes ikke' : n === 1 ? '1 sæt/dag' : `${n} sæt/dag`);
 
   // Holder man musen over (eller tabber til) en øvelse, vises den som animation,
@@ -228,9 +229,17 @@
     const amount = el('small');
     const steps = el('ol');
     const hint = el('p', { class: 'ex-preview-hint' });
+    const bars = [1, 2, 3].map(() => el('i'));
+    const levelText = el('span');
+    const level = el('div', { class: 'ex-preview-level' }, [
+      el('span', { class: 'ex-preview-label', text: 'Sværhedsgrad' }),
+      el('span', { class: 'difficulty-bars', 'aria-hidden': 'true' }, bars),
+      levelText,
+    ]);
     const card = el('div', { class: 'ex-preview', id: 'ex-preview', role: 'tooltip', hidden: '' }, [
       svg,
       el('div', { class: 'ex-preview-head' }, [title, amount]),
+      level,
       steps,
       hint,
     ]);
@@ -263,6 +272,9 @@
         player = anim ? window.Figure.play(svg, anim) : null;
         title.textContent = ex.name;
         amount.textContent = ex.amount;
+        level.dataset.level = ex.difficulty;
+        bars.forEach((bar, i) => bar.classList.toggle('on', i < ex.difficulty));
+        levelText.textContent = DIFFICULTY_NAMES[ex.difficulty] || '';
         steps.replaceChildren(...ex.steps.map((step) => el('li', { text: step })));
       }
       hint.textContent = ex.enabled ? 'Valgt · klik for at fravælge' : 'Ikke valgt · klik for at vælge';

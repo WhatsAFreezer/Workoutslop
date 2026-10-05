@@ -155,7 +155,7 @@ test('fokus: kun øvelser fra de valgte områder', () => {
 test('fokus: øvelser kan høre til flere områder', () => {
   assert.deepEqual(engine.focusAreasOf(byId('pullup')).sort(), ['arms', 'backPosture']);
   assert.deepEqual(engine.focusAreasOf(byId('neckCurl')), ['backPosture']);
-  assert.deepEqual(engine.focusAreasOf(byId('romanianDeadlift')).sort(), ['backPosture', 'legsAbs']);
+  assert.deepEqual(engine.focusAreasOf(byId('romanianDeadlift')), ['legsAbs']);
   for (const ex of EXERCISES) assert.ok(engine.focusAreasOf(ex).length > 0, `${ex.id} har intet fokusområde`);
 });
 
@@ -260,4 +260,25 @@ test('fravalgte øvelser og muskelgrupper med 0 sæt bruges ikke', () => {
   assert.ok(!ids.includes('diamondPushup'));
   assert.ok(!ids.some((id) => byId(id).muscleGroup === 'triceps'));
   assert.ok(ids.includes('hammerCurl'));
+});
+
+test('alle øvelser har en sværhedsgrad og en animation', () => {
+  const ANIMATIONS = require('../src/renderer/shared/animations');
+  for (const ex of EXERCISES) {
+    assert.ok([1, 2, 3].includes(ex.difficulty), `${ex.id}: sværhedsgrad`);
+    assert.ok(ANIMATIONS[ex.animation], `${ex.id}: animation`);
+    assert.ok(ex.steps.length >= 2 && ex.tip, `${ex.id}: forklaring`);
+  }
+  assert.equal(new Set(EXERCISES.map((e) => e.id)).size, EXERCISES.length, 'ingen dubletter');
+});
+
+test('skuldre, ryg og triceps kan trænes uden vægte', () => {
+  const groups = (equipment, level = 2) =>
+    new Set(engine.availableExercises(EXERCISES, { level, equipment }).map((e) => e.muscleGroup));
+  const bodyweight = groups([]);
+  for (const g of ['chest', 'shoulders', 'back', 'posture', 'neck', 'triceps', 'legs', 'core', 'cardio']) {
+    assert.ok(bodyweight.has(g), `uden udstyr: ${g}`);
+  }
+  const band = groups(['resistanceBand']);
+  for (const g of ['back', 'posture', 'biceps', 'triceps']) assert.ok(band.has(g), `elastik: ${g}`);
 });

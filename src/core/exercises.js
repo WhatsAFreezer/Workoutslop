@@ -8,6 +8,7 @@
 //            betyder "mindst én af dem" (fx håndvægt ELLER kettlebell).
 // unit:      'reps' (gentagelser), 'seconds' (hold i X sekunder) eller
 //            'perSide' (gentagelser pr. side/ben/arm).
+// difficulty: 1 = let, 2 = middel, 3 = svær (vises i opsætningen).
 // amounts:   grundmængden for styrkeniveau 1–4. `null` = øvelsen foreslås
 //            ikke på det niveau (for svær eller for let).
 // animation: navnet på animationen i src/renderer/shared/animations.js.
@@ -19,6 +20,7 @@ const EXERCISES = [
     muscleGroup: 'chest',
     equipment: [],
     unit: 'reps',
+    difficulty: 2,
     amounts: [5, 10, 18, 28],
     animation: 'pushup',
     steps: [
@@ -34,6 +36,7 @@ const EXERCISES = [
     muscleGroup: 'chest',
     equipment: [],
     unit: 'reps',
+    difficulty: 1,
     amounts: [8, 12, null, null],
     animation: 'kneePushup',
     steps: [
@@ -49,6 +52,7 @@ const EXERCISES = [
     muscleGroup: 'legs',
     equipment: [],
     unit: 'reps',
+    difficulty: 1,
     amounts: [10, 15, 25, 40],
     animation: 'squat',
     steps: [
@@ -65,6 +69,7 @@ const EXERCISES = [
     equipment: [],
     unit: 'perSide',
     sideLabel: 'pr. ben',
+    difficulty: 2,
     amounts: [5, 8, 12, 16],
     animation: 'lunge',
     steps: [
@@ -80,6 +85,7 @@ const EXERCISES = [
     muscleGroup: 'core',
     equipment: [],
     unit: 'seconds',
+    difficulty: 1,
     amounts: [20, 30, 50, 75],
     animation: 'plank',
     steps: [
@@ -95,6 +101,7 @@ const EXERCISES = [
     muscleGroup: 'cardio',
     equipment: [],
     unit: 'reps',
+    difficulty: 1,
     amounts: [20, 30, 45, 60],
     animation: 'jumpingJack',
     steps: [
@@ -111,6 +118,7 @@ const EXERCISES = [
     equipment: [],
     unit: 'perSide',
     sideLabel: 'pr. ben',
+    difficulty: 2,
     amounts: [8, 12, 18, 25],
     animation: 'mountainClimber',
     steps: [
@@ -126,6 +134,7 @@ const EXERCISES = [
     muscleGroup: 'legs',
     equipment: [],
     unit: 'reps',
+    difficulty: 1,
     amounts: [10, 15, 20, 30],
     animation: 'gluteBridge',
     steps: [
@@ -142,6 +151,7 @@ const EXERCISES = [
     extraFocus: ['chestShoulders'],
     equipment: [],
     unit: 'reps',
+    difficulty: 3,
     amounts: [null, 6, 10, 15],
     animation: 'burpee',
     steps: [
@@ -157,6 +167,7 @@ const EXERCISES = [
     muscleGroup: 'legs',
     equipment: [],
     unit: 'seconds',
+    difficulty: 2,
     amounts: [20, 35, 50, 75],
     animation: 'wallSit',
     steps: [
@@ -172,6 +183,7 @@ const EXERCISES = [
     muscleGroup: 'core',
     equipment: [],
     unit: 'reps',
+    difficulty: 1,
     amounts: [10, 15, 20, 30],
     animation: 'crunch',
     steps: ['Lig på ryggen med bøjede knæ.', 'Rul skuldrene op fra gulvet ved at spænde maven.', 'Sænk langsomt igen.'],
@@ -183,6 +195,7 @@ const EXERCISES = [
     muscleGroup: 'legs',
     equipment: [],
     unit: 'reps',
+    difficulty: 1,
     amounts: [15, 20, 30, 40],
     animation: 'calfRaise',
     steps: ['Stå med fødderne i hoftebredde.', 'Løft hælene så højt, du kan.', 'Sænk langsomt ned igen.'],
@@ -194,6 +207,7 @@ const EXERCISES = [
     muscleGroup: 'back',
     equipment: [],
     unit: 'reps',
+    difficulty: 1,
     amounts: [8, 12, 15, 20],
     animation: 'superman',
     steps: [
@@ -211,6 +225,7 @@ const EXERCISES = [
     extraFocus: ['chestShoulders'],
     equipment: [],
     unit: 'reps',
+    difficulty: 3,
     amounts: [3, 6, 10, 15],
     animation: 'pushup',
     steps: [
@@ -226,6 +241,7 @@ const EXERCISES = [
     muscleGroup: 'neck',
     equipment: [],
     unit: 'reps',
+    difficulty: 1,
     amounts: [8, 10, 12, 15],
     animation: 'chinTuck',
     steps: [
@@ -241,6 +257,7 @@ const EXERCISES = [
     muscleGroup: 'posture',
     equipment: [],
     unit: 'reps',
+    difficulty: 1,
     amounts: [6, 8, 10, 12],
     animation: 'wallAngel',
     steps: [
@@ -259,6 +276,7 @@ const EXERCISES = [
     extraFocus: ['arms'],
     equipment: ['pullupBar'],
     unit: 'reps',
+    difficulty: 3,
     amounts: [null, 3, 6, 10],
     animation: 'pullup',
     steps: [
@@ -275,6 +293,7 @@ const EXERCISES = [
     extraFocus: ['arms'],
     equipment: ['pullupBar'],
     unit: 'reps',
+    difficulty: 3,
     amounts: [null, 3, 7, 11],
     animation: 'pullup',
     steps: [
@@ -291,6 +310,7 @@ const EXERCISES = [
     extraFocus: ['arms'],
     equipment: ['pullupBar'],
     unit: 'reps',
+    difficulty: 2,
     amounts: [3, 4, null, null],
     animation: 'negativePullup',
     steps: [
@@ -307,6 +327,7 @@ const EXERCISES = [
     extraFocus: ['arms'],
     equipment: ['pullupBar'],
     unit: 'seconds',
+    difficulty: 2,
     amounts: [15, 25, 35, 50],
     animation: 'deadHang',
     steps: [
@@ -322,6 +343,7 @@ const EXERCISES = [
     muscleGroup: 'core',
     equipment: ['pullupBar'],
     unit: 'reps',
+    difficulty: 2,
     amounts: [4, 8, 12, 15],
     animation: 'hangingKneeRaise',
     steps: [
@@ -339,6 +361,7 @@ const EXERCISES = [
     muscleGroup: 'biceps',
     equipment: ['dumbbells'],
     unit: 'reps',
+    difficulty: 1,
     amounts: [8, 10, 12, 15],
     animation: 'bicepCurl',
     steps: [
@@ -355,6 +378,7 @@ const EXERCISES = [
     equipment: ['dumbbells'],
     unit: 'perSide',
     sideLabel: 'pr. arm',
+    difficulty: 1,
     amounts: [8, 10, 12, 15],
     animation: 'dumbbellRow',
     steps: [
@@ -370,6 +394,7 @@ const EXERCISES = [
     muscleGroup: 'shoulders',
     equipment: ['dumbbells'],
     unit: 'reps',
+    difficulty: 2,
     amounts: [6, 8, 12, 15],
     animation: 'shoulderPress',
     steps: [
@@ -385,6 +410,7 @@ const EXERCISES = [
     muscleGroup: 'shoulders',
     equipment: ['dumbbells'],
     unit: 'reps',
+    difficulty: 1,
     amounts: [8, 10, 12, 15],
     animation: 'lateralRaise',
     steps: [
@@ -400,6 +426,7 @@ const EXERCISES = [
     muscleGroup: 'legs',
     equipment: [['dumbbells', 'kettlebell']],
     unit: 'reps',
+    difficulty: 2,
     amounts: [8, 10, 15, 20],
     animation: 'gobletSquat',
     steps: [
@@ -415,6 +442,7 @@ const EXERCISES = [
     muscleGroup: 'legs',
     equipment: ['kettlebell'],
     unit: 'reps',
+    difficulty: 2,
     amounts: [10, 15, 20, 30],
     animation: 'kettlebellSwing',
     steps: [
@@ -432,6 +460,7 @@ const EXERCISES = [
     muscleGroup: 'chest',
     equipment: ['bench'],
     unit: 'reps',
+    difficulty: 1,
     amounts: [8, 12, 15, null],
     animation: 'inclinePushup',
     steps: [
@@ -448,6 +477,7 @@ const EXERCISES = [
     extraFocus: ['chestShoulders'],
     equipment: ['bench'],
     unit: 'reps',
+    difficulty: 2,
     amounts: [6, 10, 14, 20],
     animation: 'benchDip',
     steps: [
@@ -464,6 +494,7 @@ const EXERCISES = [
     equipment: ['bench'],
     unit: 'perSide',
     sideLabel: 'pr. ben',
+    difficulty: 1,
     amounts: [6, 8, 12, 15],
     animation: 'stepUp',
     steps: [
@@ -480,6 +511,7 @@ const EXERCISES = [
     equipment: ['bench'],
     unit: 'perSide',
     sideLabel: 'pr. ben',
+    difficulty: 3,
     amounts: [null, 6, 8, 12],
     animation: 'splitSquat',
     steps: [
@@ -495,6 +527,7 @@ const EXERCISES = [
     muscleGroup: 'chest',
     equipment: ['dumbbells', 'bench'],
     unit: 'reps',
+    difficulty: 2,
     amounts: [8, 10, 12, 15],
     animation: 'benchPress',
     steps: [
@@ -512,6 +545,7 @@ const EXERCISES = [
     muscleGroup: 'posture',
     equipment: ['resistanceBand'],
     unit: 'reps',
+    difficulty: 1,
     amounts: [10, 15, 20, 25],
     animation: 'bandPullApart',
     steps: [
@@ -527,6 +561,7 @@ const EXERCISES = [
     muscleGroup: 'biceps',
     equipment: ['resistanceBand'],
     unit: 'reps',
+    difficulty: 1,
     amounts: [10, 15, 20, 25],
     animation: 'bandCurl',
     steps: [
@@ -544,6 +579,7 @@ const EXERCISES = [
     muscleGroup: 'neck',
     equipment: ['bench', ['dumbbells', 'barbell']],
     unit: 'reps',
+    difficulty: 1,
     amounts: [10, 12, 15, 20],
     animation: 'neckCurl',
     steps: [
@@ -559,6 +595,7 @@ const EXERCISES = [
     muscleGroup: 'neck',
     equipment: ['bench'],
     unit: 'reps',
+    difficulty: 1,
     amounts: [10, 12, 15, 20],
     animation: 'neckExtension',
     steps: [
@@ -574,6 +611,7 @@ const EXERCISES = [
     muscleGroup: 'posture',
     equipment: ['bench', 'dumbbells'],
     unit: 'reps',
+    difficulty: 1,
     amounts: [8, 10, 12, 15],
     animation: 'proneYRaise',
     steps: [
@@ -589,6 +627,7 @@ const EXERCISES = [
     muscleGroup: 'back',
     equipment: ['bench', 'dumbbells'],
     unit: 'reps',
+    difficulty: 1,
     amounts: [8, 10, 12, 15],
     animation: 'chestSupportedRow',
     steps: [
@@ -604,6 +643,7 @@ const EXERCISES = [
     muscleGroup: 'biceps',
     equipment: ['bench', ['dumbbells', 'barbell']],
     unit: 'reps',
+    difficulty: 1,
     amounts: [8, 10, 12, 15],
     animation: 'preacherCurl',
     steps: [
@@ -621,6 +661,7 @@ const EXERCISES = [
     muscleGroup: 'biceps',
     equipment: ['barbell'],
     unit: 'reps',
+    difficulty: 2,
     amounts: [8, 10, 12, 15],
     animation: 'barbellCurl',
     steps: [
@@ -636,6 +677,7 @@ const EXERCISES = [
     muscleGroup: 'back',
     equipment: ['barbell'],
     unit: 'reps',
+    difficulty: 2,
     amounts: [8, 10, 12, 12],
     animation: 'barbellRow',
     steps: [
@@ -651,6 +693,7 @@ const EXERCISES = [
     muscleGroup: 'shoulders',
     equipment: ['barbell'],
     unit: 'reps',
+    difficulty: 2,
     amounts: [6, 8, 10, 12],
     animation: 'overheadPress',
     steps: [
@@ -664,9 +707,9 @@ const EXERCISES = [
     id: 'romanianDeadlift',
     name: 'Rumænsk dødløft',
     muscleGroup: 'legs',
-    extraFocus: ['backPosture'],
     equipment: ['barbell'],
     unit: 'reps',
+    difficulty: 2,
     amounts: [8, 10, 12, 12],
     animation: 'romanianDeadlift',
     steps: [
@@ -682,6 +725,7 @@ const EXERCISES = [
     muscleGroup: 'chest',
     equipment: ['bench', 'barbell'],
     unit: 'reps',
+    difficulty: 3,
     amounts: [6, 8, 10, 12],
     animation: 'barbellBenchPress',
     steps: [
@@ -699,6 +743,7 @@ const EXERCISES = [
     muscleGroup: 'forearms',
     equipment: [],
     unit: 'seconds',
+    difficulty: 1,
     amounts: [20, 30, 30, 40],
     animation: 'wristStretch',
     steps: [
@@ -714,6 +759,7 @@ const EXERCISES = [
     muscleGroup: 'forearms',
     equipment: [['dumbbells', 'barbell']],
     unit: 'reps',
+    difficulty: 1,
     amounts: [10, 12, 15, 20],
     animation: 'wristCurl',
     steps: [
@@ -729,6 +775,7 @@ const EXERCISES = [
     muscleGroup: 'forearms',
     equipment: [['dumbbells', 'barbell']],
     unit: 'reps',
+    difficulty: 1,
     amounts: [10, 12, 15, 20],
     animation: 'reverseWristCurl',
     steps: [
@@ -744,6 +791,7 @@ const EXERCISES = [
     muscleGroup: 'forearms',
     equipment: ['dumbbells'],
     unit: 'reps',
+    difficulty: 1,
     amounts: [8, 10, 12, 15],
     animation: 'bicepCurl',
     steps: [
@@ -759,6 +807,7 @@ const EXERCISES = [
     muscleGroup: 'forearms',
     equipment: ['barbell'],
     unit: 'reps',
+    difficulty: 2,
     amounts: [8, 10, 12, 15],
     animation: 'barbellCurl',
     steps: [
@@ -774,6 +823,7 @@ const EXERCISES = [
     muscleGroup: 'forearms',
     equipment: [['dumbbells', 'kettlebell']],
     unit: 'seconds',
+    difficulty: 1,
     amounts: [20, 30, 40, 60],
     animation: 'farmersHold',
     steps: [
@@ -782,6 +832,346 @@ const EXERCISES = [
       'Hold så længe, tiden siger – eller gå rundt i rummet imens.',
     ],
     tip: 'Klem hårdt om håndtagene – det er grebet, der trænes.',
+  },
+  // --- Flere øvelser uden udstyr -------------------------------------------
+  {
+    id: 'pikePushup',
+    name: 'Pike push-ups',
+    muscleGroup: 'shoulders',
+    equipment: [],
+    unit: 'reps',
+    difficulty: 3,
+    amounts: [null, 5, 8, 12],
+    animation: 'pikePushup',
+    steps: [
+      'Stå i armbøjningsposition, og gå med fødderne frem, så hoften kommer højt op.',
+      'Bøj albuerne, og sænk hovedet ned mod gulvet lige foran hænderne.',
+      'Pres dig op igen, til armene er strakte.',
+    ],
+    tip: 'Jo tættere fødderne er på hænderne, jo mere rammer det skuldrene.',
+  },
+  {
+    id: 'floorYRaise',
+    name: 'Y-løft på gulvet',
+    muscleGroup: 'posture',
+    equipment: [],
+    unit: 'reps',
+    difficulty: 1,
+    amounts: [6, 8, 10, 12],
+    animation: 'floorYRaise',
+    steps: [
+      'Lig på maven med armene strakt frem i et Y og tommelfingrene opad.',
+      'Løft armene fra gulvet ved at trække skulderbladene ned og sammen.',
+      'Hold 2 sekunder, og sænk langsomt.',
+    ],
+    tip: 'Kig ned i gulvet, så nakken holdes lang.',
+  },
+  {
+    id: 'wallChestStretch',
+    name: 'Brystudstrækning ved væggen',
+    muscleGroup: 'posture',
+    equipment: [],
+    unit: 'seconds',
+    difficulty: 1,
+    amounts: [20, 30, 30, 40],
+    animation: 'wallChestStretch',
+    steps: [
+      'Stå ved en væg eller en dørkarm, og læg hånden mod den i skulderhøjde bag dig.',
+      'Tag et lille skridt frem, og drej let væk fra armen, til det strækker i brystet.',
+      'Hold stillingen – tag halvdelen af tiden på hver arm.',
+    ],
+    tip: 'God modvægt til mange timer foran skærmen med skuldrene rullet frem.',
+  },
+  {
+    id: 'supineNeckLift',
+    name: 'Nakkeløft liggende',
+    muscleGroup: 'neck',
+    equipment: [],
+    unit: 'reps',
+    difficulty: 1,
+    amounts: [6, 8, 10, 12],
+    animation: 'supineNeckLift',
+    steps: [
+      'Lig på ryggen med bøjede ben.',
+      'Træk hagen ind, som om du laver dobbelthage.',
+      'Løft hovedet et par centimeter fra gulvet, hold 2 sekunder, og sænk igen.',
+    ],
+    tip: 'Hold hagen inde hele tiden – det er de dybe nakkemuskler, der skal arbejde.',
+  },
+  {
+    id: 'legRaise',
+    name: 'Benløft',
+    muscleGroup: 'core',
+    equipment: [],
+    unit: 'reps',
+    difficulty: 2,
+    amounts: [6, 10, 14, 18],
+    animation: 'legRaise',
+    steps: [
+      'Lig på ryggen med armene langs siden.',
+      'Løft de strakte ben op, til de peger mod loftet.',
+      'Sænk dem langsomt, til de næsten rører gulvet.',
+    ],
+    tip: 'Pres lænden ned i gulvet hele vejen. Bøj knæene, hvis den løfter sig.',
+  },
+  {
+    id: 'deadBug',
+    name: 'Dead bug',
+    muscleGroup: 'core',
+    equipment: [],
+    unit: 'perSide',
+    sideLabel: 'pr. side',
+    difficulty: 1,
+    amounts: [5, 6, 8, 10],
+    animation: 'deadBug',
+    steps: [
+      'Lig på ryggen med armene mod loftet og hofte og knæ bøjet 90 grader.',
+      'Stræk den ene arm bagud og det modsatte ben frem, lige over gulvet.',
+      'Kom tilbage, og skift side.',
+    ],
+    tip: 'Lænden skal blive i gulvet. Gå langsomt.',
+  },
+  {
+    id: 'birdDog',
+    name: 'Bird dog',
+    muscleGroup: 'core',
+    extraFocus: ['backPosture'],
+    equipment: [],
+    unit: 'perSide',
+    sideLabel: 'pr. side',
+    difficulty: 1,
+    amounts: [5, 6, 8, 10],
+    animation: 'birdDog',
+    steps: [
+      'Stå på alle fire med hænderne under skuldrene og knæene under hoften.',
+      'Stræk den ene arm frem og det modsatte ben bagud, til de er i linje med ryggen.',
+      'Hold 2 sekunder, kom tilbage, og skift side.',
+    ],
+    tip: 'Forestil dig et glas vand på lænden – det må ikke vælte.',
+  },
+  {
+    id: 'sidePlank',
+    name: 'Sideplanke',
+    muscleGroup: 'core',
+    equipment: [],
+    unit: 'seconds',
+    difficulty: 2,
+    amounts: [15, 20, 30, 45],
+    animation: 'sidePlank',
+    steps: [
+      'Lig på siden med albuen under skulderen og fødderne oven på hinanden.',
+      'Løft hoften, så kroppen er lige fra hoved til fødder.',
+      'Hold – tag halvdelen af tiden på hver side.',
+    ],
+    tip: 'For hårdt? Sæt det nederste knæ i gulvet.',
+  },
+  {
+    id: 'jumpSquat',
+    name: 'Squathop',
+    muscleGroup: 'cardio',
+    equipment: [],
+    unit: 'reps',
+    difficulty: 2,
+    amounts: [null, 8, 12, 18],
+    animation: 'jumpSquat',
+    steps: [
+      'Gå ned i en squat med armene frem.',
+      'Hop så højt du kan, og sving armene ned.',
+      'Land blødt på forfoden, og gå direkte ned i næste squat.',
+    ],
+    tip: 'Land stille – så bruger du musklerne i stedet for leddene.',
+  },
+  {
+    id: 'highKnees',
+    name: 'Høje knæ',
+    muscleGroup: 'cardio',
+    equipment: [],
+    unit: 'seconds',
+    difficulty: 1,
+    amounts: [20, 30, 40, 45],
+    animation: 'highKnees',
+    steps: ['Løb på stedet.', 'Træk knæene op til hoftehøjde, og sving armene med.', 'Hold tempoet højt hele tiden.'],
+    tip: 'Bliv på forfoden, og hold overkroppen rank.',
+  },
+
+  // --- Flere øvelser med udstyr ----------------------------------------------
+  {
+    id: 'declinePushup',
+    name: 'Armbøjninger med fødderne på bænken',
+    muscleGroup: 'chest',
+    equipment: ['bench'],
+    unit: 'reps',
+    difficulty: 3,
+    amounts: [null, 6, 10, 15],
+    animation: 'declinePushup',
+    steps: [
+      'Sæt fødderne op på bænken og hænderne i gulvet lidt bredere end skuldrene.',
+      'Hold kroppen helt lige.',
+      'Sænk brystet mod gulvet, og pres dig op igen.',
+    ],
+    tip: 'Rammer den øverste del af brystet og skuldrene mere end almindelige armbøjninger.',
+  },
+  {
+    id: 'hipThrust',
+    name: 'Hip thrust',
+    muscleGroup: 'legs',
+    equipment: ['bench'],
+    unit: 'reps',
+    difficulty: 1,
+    amounts: [10, 12, 15, 20],
+    animation: 'hipThrust',
+    steps: [
+      'Sid på gulvet med skulderbladene mod kanten af bænken og fødderne i gulvet.',
+      'Pres gennem hælene, og løft hoften, til kroppen er vandret fra knæ til skuldre.',
+      'Klem ballerne i toppen, og sænk langsomt.',
+    ],
+    tip: 'For let? Læg en håndvægt på hoften.',
+  },
+  {
+    id: 'frontRaise',
+    name: 'Frontløft',
+    muscleGroup: 'shoulders',
+    equipment: ['dumbbells'],
+    unit: 'reps',
+    difficulty: 1,
+    amounts: [8, 10, 12, 15],
+    animation: 'frontRaise',
+    steps: [
+      'Stå med en håndvægt i hver hånd foran lårene.',
+      'Løft armene strakt frem til skulderhøjde.',
+      'Sænk langsomt igen.',
+    ],
+    tip: 'Brug en let vægt, og sving ikke med kroppen.',
+  },
+  {
+    id: 'dumbbellPullover',
+    name: 'Pullover med håndvægt',
+    muscleGroup: 'chest',
+    extraFocus: ['backPosture'],
+    equipment: ['bench', 'dumbbells'],
+    unit: 'reps',
+    difficulty: 2,
+    amounts: [8, 10, 12, 15],
+    animation: 'dumbbellPullover',
+    steps: [
+      'Lig på bænken, og hold én håndvægt med begge hænder over brystet.',
+      'Sænk vægten i en bue bagud over hovedet med let bøjede albuer.',
+      'Træk den tilbage over brystet.',
+    ],
+    tip: 'Gå kun så langt ned, som skuldrene kan lide.',
+  },
+  {
+    id: 'skullCrusher',
+    name: 'Skull crushers',
+    muscleGroup: 'triceps',
+    equipment: ['bench', ['dumbbells', 'barbell']],
+    unit: 'reps',
+    difficulty: 2,
+    amounts: [8, 10, 12, 15],
+    animation: 'skullCrusher',
+    steps: [
+      'Lig på bænken med vægten strakt op over brystet.',
+      'Bøj kun i albuerne, og sænk vægten mod panden.',
+      'Stræk armene igen.',
+    ],
+    tip: 'Overarmene skal stå stille – kun underarmene bevæger sig.',
+  },
+  {
+    id: 'overheadTricepsExtension',
+    name: 'Triceps over hovedet',
+    muscleGroup: 'triceps',
+    equipment: ['dumbbells'],
+    unit: 'reps',
+    difficulty: 2,
+    amounts: [8, 10, 12, 15],
+    animation: 'overheadTricepsExtension',
+    steps: [
+      'Hold én håndvægt med begge hænder strakt over hovedet.',
+      'Bøj albuerne, og sænk vægten ned bag hovedet.',
+      'Stræk armene op igen.',
+    ],
+    tip: 'Hold albuerne pegende fremad og tæt på hovedet.',
+  },
+  {
+    id: 'concentrationCurl',
+    name: 'Koncentrationscurl',
+    muscleGroup: 'biceps',
+    equipment: ['bench', 'dumbbells'],
+    unit: 'perSide',
+    sideLabel: 'pr. arm',
+    difficulty: 1,
+    amounts: [8, 10, 12, 15],
+    animation: 'concentrationCurl',
+    steps: [
+      'Sid på bænken, og læn dig frem med albuen mod indersiden af låret.',
+      'Curl håndvægten op mod skulderen.',
+      'Sænk langsomt, og skift arm.',
+    ],
+    tip: 'Albuen bliver mod låret hele tiden, så det ikke er skulderen, der løfter.',
+  },
+  {
+    id: 'dumbbellRDL',
+    name: 'Rumænsk dødløft med håndvægte',
+    muscleGroup: 'legs',
+    equipment: ['dumbbells'],
+    unit: 'reps',
+    difficulty: 2,
+    amounts: [8, 10, 12, 15],
+    animation: 'dumbbellRDL',
+    steps: [
+      'Stå med en håndvægt i hver hånd foran lårene og let bøjede knæ.',
+      'Skub hoften bagud, og før vægtene ned langs benene med lige ryg.',
+      'Stop, når baglårene strækker, og rejs dig op.',
+    ],
+    tip: 'Træner baglår og balder. Hold ryggen lige hele vejen.',
+  },
+  {
+    id: 'bandRow',
+    name: 'Roning med elastik',
+    muscleGroup: 'back',
+    equipment: ['resistanceBand'],
+    unit: 'reps',
+    difficulty: 1,
+    amounts: [10, 12, 15, 20],
+    animation: 'bandRow',
+    steps: [
+      'Sid på gulvet med strakte ben og elastikken om fødderne.',
+      'Træk hænderne ind mod maven med albuerne tæt på kroppen.',
+      'Klem skulderbladene sammen, og slip langsomt.',
+    ],
+    tip: 'Sid rank – læn dig ikke bagud for at trække.',
+  },
+  {
+    id: 'bandFacePull',
+    name: 'Face pulls med elastik',
+    muscleGroup: 'posture',
+    equipment: ['resistanceBand'],
+    unit: 'reps',
+    difficulty: 1,
+    amounts: [10, 12, 15, 20],
+    animation: 'bandFacePull',
+    steps: [
+      'Fastgør elastikken i ansigtshøjde, fx i et dørhåndtag eller en dørkarm.',
+      'Træk den mod ansigtet med albuerne højt og ud til siden.',
+      'Klem skulderbladene sammen, og slip langsomt.',
+    ],
+    tip: 'En af de bedste øvelser mod fremadrullede skuldre.',
+  },
+  {
+    id: 'bandPushdown',
+    name: 'Triceps pushdown med elastik',
+    muscleGroup: 'triceps',
+    equipment: ['resistanceBand'],
+    unit: 'reps',
+    difficulty: 1,
+    amounts: [10, 15, 20, 25],
+    animation: 'bandPushdown',
+    steps: [
+      'Fastgør elastikken højt oppe, fx i toppen af en dør.',
+      'Hold albuerne ind til siden, og pres hænderne ned, til armene er strakte.',
+      'Slip langsomt op igen.',
+    ],
+    tip: 'Kun underarmene bevæger sig.',
   },
 ];
 

@@ -29,7 +29,7 @@ const FREQUENCIES = [
 
 // Muskelgruppen vises på overlayet og bruges til at give variation.
 const MUSCLE_GROUPS = {
-  chest: 'Bryst, skuldre & triceps',
+  chest: 'Bryst',
   shoulders: 'Skuldre',
   back: 'Ryg',
   posture: 'Holdning & øvre ryg',

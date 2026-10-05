@@ -145,7 +145,9 @@
   const f = (n) => n.toFixed(1);
   const path = (points) => 'M' + points.map((p) => `${f(p[0])} ${f(p[1])}`).join(' L');
 
+  // Et punkt på kroppen ('hand0', 'ankle1', ...) – eller et fast punkt [x, y].
   function pointRef(s, ref) {
+    if (Array.isArray(ref)) return ref;
     const index = Number(ref.slice(-1)) || 0;
     const kind = ref.replace(/\d$/, '');
     switch (kind) {

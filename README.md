@@ -28,7 +28,8 @@ Linket giver altid den nyeste version, og appen opdaterer sig selv bagefter.
      kombination, fx Bryst & skuldre + Arme. "Arme" dækker biceps, triceps og underarme/greb. Vælger du
      intet, får du hele kroppen.
    - **Øvelser** – hvor mange sæt hver muskelgruppe skal have om dagen, og hvilke øvelser du vil have. Sættene
-     fordeles over de øvelser, du har valgt.
+     fordeles over de øvelser, du har valgt. Hold musen over en øvelse for at se den som animation, med
+     sværhedsgrad og hvordan den laves.
    - **Pauser** – hvor ofte du vil træne, om inaktivitet skal tælle som pause, hvilket hjørne overlayet skal
      vises i, og om øvelsen skal læses højt.
    - **Spil** – de spil appen kender, dine egne spil og den præcise integration til CS2 og Dota 2.
@@ -157,7 +158,7 @@ at have et ikon i systembakken og at læse, hvor længe mus og tastatur har vær
 src/
   core/                    Logikken – ren JavaScript uden Electron, så den kan testes
     catalog.js             Styrkeniveauer, udstyr, fokusområder, muskelgrupper
-    exercises.js           Alle 50 øvelser med mængder, trin og tips
+    exercises.js           Alle 71 øvelser med mængder, sværhedsgrad, trin og tips
     workout-engine.js      Vælger øvelse og udregner antal gentagelser
     games.js               Kendte spil og genkendelse af kørende programmer
     gsi.js                 CS2/Dota 2 Game State Integration
