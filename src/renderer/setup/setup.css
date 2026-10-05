@@ -1199,3 +1199,84 @@ button:focus-visible {
   font-size: 13px;
   font-weight: 650;
 }
+
+/* Fejlfinding ---------------------------------------------------------------- */
+.debug-link,
+.inline-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.debug-link {
+  justify-self: start;
+  margin: 0 6px;
+  font-size: 12.5px;
+}
+.debug-link:hover,
+.inline-link:hover,
+.debug-link[aria-current='page'] {
+  color: var(--text);
+}
+.ov-help {
+  margin: 18px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.debug-copied {
+  align-self: center;
+  font-size: 13px;
+  color: var(--accent);
+}
+.debug .hint {
+  margin: 10px 0 18px;
+}
+.debug-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.debug .signals {
+  grid-template-columns: minmax(110px, auto) 1fr;
+  font-size: 13px;
+}
+.debug .signals dd {
+  overflow-wrap: anywhere;
+}
+.debug h2 small {
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.debug-log {
+  max-height: 340px;
+  margin: 12px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  font-size: 12.5px;
+}
+.debug-log li {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 10px;
+  padding: 4px 0;
+  border-top: 1px solid var(--border);
+}
+.debug-log li:first-child {
+  border-top: none;
+}
+.debug-log time {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.debug-log .empty {
+  display: block;
+  color: var(--muted);
+}

@@ -77,6 +77,7 @@
             <div class="update-text" id="update-text" role="status"></div>
             <button type="button" class="btn small" id="update-btn">Søg efter opdateringer</button>
           </div>
+          <button type="button" class="debug-link" id="nav-debug" hidden>Fejlfinding</button>
         </div>
       </aside>
 
@@ -116,6 +117,31 @@
                 <table class="sr-only" id="ov-table"></table>
               </section>
             </div>
+            <p class="ov-help">
+              Virker noget ikke, som det skal?
+              <button type="button" class="inline-link" id="ov-debug">Se fejlfinding</button>
+            </p>
+          </section>
+
+          <!-- Fejlfinding -->
+          <section class="step debug" data-step="debug" hidden>
+            <h1>Fejlfinding</h1>
+            <p class="lead">
+              Her kan du se, hvad Workoutslop registrerer lige nu, og hvad der er sket, siden appen startede. Virker
+              noget ikke, så kopiér rapporten og send den med din beskrivelse.
+            </p>
+            <div class="ov-actions">
+              <button type="button" class="btn primary" id="debug-copy">Kopiér rapport</button>
+              <span class="debug-copied" id="debug-copied" role="status"></span>
+            </div>
+            <p class="hint">
+              Rapporten indeholder navnene på de programmer, du har haft åbne – men ingen filstier eller vinduestitler.
+            </p>
+            <div class="debug-grid" id="debug-sections"></div>
+            <section class="panel">
+              <h2>Hændelser <small>nyeste først</small></h2>
+              <ol class="debug-log" id="debug-log"></ol>
+            </section>
           </section>
 
           <!-- Trin 1 -->

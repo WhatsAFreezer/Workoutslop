@@ -41,7 +41,7 @@ Linket giver altid den nyeste version, og appen opdaterer sig selv bagefter.
 2. **Spil som normalt.** Workoutslop opdager selv, når et spil kører, og viser øvelsen på den skærm, spillet
    kører på.
 3. **Lav øvelsen, når overlayet dukker op**, og tryk **Færdig**. Du kan også vælge **Anden** (en anden
-   øvelse), **Om 10 min** (udsæt) eller **✕** (spring over).
+   øvelse), **Om 10 min** (udsæt), **For hårdt?** (færre gentagelser) eller **✕** (spring over).
 4. Starter næste kamp, før du har trykket på noget, bliver overlayet til en lille bjælke: "Nåede du det?"
 
 ### Genvejstaster (virker også inde i spillet)
@@ -122,6 +122,10 @@ Kort tid siden betyder trætte muskler og færre gentagelser. Lang tid betyder m
 mere end 6 timer, starter du forfra med normal mængde, fordi du ikke er varmet op. Øvelser på tid (planke,
 vægsid, hæng i stangen) rundes til hele 5 sekunder og har en indbygget timer.
 
+**Mængden følger dig:** Hver 3. gang du gennemfører en øvelse, bliver den 5 % sværere (højst +50 %). Er den
+for hård, så tryk **For hårdt?** under tallet – så sættes mængden ned med det samme, og den starter 20 % lavere
+næste gang. Skifter du styrkeniveau, starter tilpasningen forfra.
+
 ### 4. Hvilken øvelse?
 
 Kun øvelser, der passer til dit udstyr, dit niveau og dit fokus, kan vælges. En øvelse kan høre til flere
@@ -129,6 +133,9 @@ fokusområder – pull-ups tæller fx både som ryg og arme. Passer ingen øvels
 har, får du en øvelse fra hele kroppen i stedet. For variationens skyld gøres det mindre
 sandsynligt at få samme øvelse som sidst, en øvelse fra den seneste time eller den samme muskelgruppe som
 sidst. Øvelser med dit eget udstyr bliver valgt lidt oftere.
+
+Hver øvelse har en sværhedsgrad (let, middel eller svær), som du kan se ved at holde musen over den i
+opsætningen. Er du begynder, får du mest lette øvelser – er du stærk, mest de svære.
 
 ### 5. Dagens sæt
 
@@ -279,6 +286,13 @@ Installationsprogrammet (`Workoutslop-Setup.exe`) havner i mappen `dist/`. Ved a
 ### Tilføj et spil
 
 Tilføj spillets procesnavn til `KNOWN_GAMES` i `src/core/games.js`, eller tilføj det direkte i opsætningen.
+
+## Virker noget ikke?
+
+Åbn **Fejlfinding** nederst i venstre side af vinduet (eller fra oversigten). Den viser, hvad Workoutslop
+registrerer lige nu – spil, vindue, fuldskærm, pausesignaler, controller – og en log over, hvad der er sket,
+siden appen startede. Tryk **Kopiér rapport**, og send den sammen med en beskrivelse af problemet. Rapporten
+indeholder navnene på de programmer, du har haft åbne, men ingen filstier eller vinduestitler.
 
 ## Kendte begrænsninger
 

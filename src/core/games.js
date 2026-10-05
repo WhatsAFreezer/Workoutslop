@@ -94,6 +94,7 @@ class GameDetector {
     this.hadWindow = new Set();
     this.last = null;
     this.misses = 0;
+    this.windowless = []; // spil hvis proces kører, men hvis vindue er lukket (til fejlfinding)
   }
 
   // windowed: navnene på processer med et synligt vindue – eller null, hvis det
@@ -101,6 +102,7 @@ class GameDetector {
   update(processNames, games, windowed = null) {
     const isRunning = createProcessMatcher(processNames);
     const hasWindow = windowed ? createProcessMatcher([...windowed]) : null;
+    this.windowless = [];
     const open = games.filter((game) => {
       const key = gameKey(game);
       if (!game.processes.some(isRunning)) {
@@ -112,7 +114,9 @@ class GameDetector {
         this.hadWindow.add(key);
         return true;
       }
-      return !this.hadWindow.has(key); // vinduet er lukket – spillet er ved at lukke ned
+      if (!this.hadWindow.has(key)) return true;
+      this.windowless.push(game.name); // vinduet er lukket – spillet er ved at lukke ned
+      return false;
     });
 
     const found = detectGame(processNames, open);

@@ -6,6 +6,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const os = require('node:os');
 const {
   app,
   BrowserWindow,
@@ -18,6 +19,7 @@ const {
   nativeImage,
   Notification,
   dialog,
+  clipboard,
 } = require('electron');
 
 const { createStore } = require('./store');
@@ -36,7 +38,8 @@ const {
   selectableProcesses,
   normalizeProcessName,
 } = require('../core/games');
-const { GameFinder, isGameFocused, isKnownNonGame } = require('../core/game-detection');
+const { GameFinder, isGameFocused, isKnownNonGame, gameFromPath } = require('../core/game-detection');
+const { EventLog, formatTime, formatReport } = require('../core/event-log');
 const { INTEGRATIONS, parseGsiPayload } = require('../core/gsi');
 const { normalizeSettings } = require('../core/settings');
 const { PauseDetector } = require('../core/pause-detector');
@@ -126,6 +129,33 @@ const focus = {
 const gameFinder = new GameFinder();
 const gameDetector = new GameDetector();
 
+// Fejlfinding: hvad appen har registreret og gjort (kun i hukommelsen).
+const events = new EventLog(300);
+const logEvent = (text) => events.add(text);
+let scanInfo = { at: 0, processes: 0, windowCheck: false, failed: false };
+let lastForegroundKey = '';
+let lastWindowless = '';
+let lastGsiLabel = '';
+let lastUpdateState = '';
+
+const exeName = (file) => (file ? path.basename(String(file).replace(/\\/g, '/')) : 'ukendt program');
+const gameKind = (game) => (game?.custom ? 'tilføjet af dig' : game?.auto ? 'fundet automatisk' : 'kendt spil');
+const SOURCE_NAMES = {
+  integration: 'spillets egen integration',
+  process: 'lobby/kamp-programmer',
+  focus: 'alt-tab',
+  idle: 'inaktivitet',
+  none: 'ingen',
+};
+
+function describePause(p) {
+  if (p.state === 'noGame') return 'Intet spil kører';
+  const name = p.game?.name ?? 'Spil';
+  const signal = SOURCE_NAMES[p.source] ?? p.source;
+  if (p.state === 'pause') return `Pause i ${name}: ${p.reason} (signal: ${signal})`;
+  return `Spiller ${name} (signal: ${signal})`;
+}
+
 const pauseDetector = new PauseDetector();
 const gamepads = new GamepadActivity();
 const coach = new Coach({
@@ -138,6 +168,7 @@ const coach = new Coach({
       exclude,
       ignoreTargets: options.ignoreTargets,
     }),
+  ease: (suggestion) => engine.easierSuggestion(suggestion),
 });
 
 const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => obj && k in obj).map((k) => [k, obj[k]]));
@@ -171,9 +202,25 @@ function trackForeground(now, idleSeconds) {
   // Vores eget overlay/vindue i forgrunden ændrer ikke på, hvad spillet gør.
   if (!fg || fg.pid === process.pid) return;
   focus.foreground = fg;
+  const fgKey = `${exeName(fg.path)}|${fg.coversMonitor}|${fg.minimized}`;
+  if (fgKey !== lastForegroundKey) {
+    lastForegroundKey = fgKey;
+    const how = fg.coversMonitor ? ' (fylder skærmen)' : fg.minimized ? ' (minimeret)' : '';
+    logEvent(`Forgrund: ${exeName(fg.path)}${how}`);
+  }
 
   const exclusive = fg.coversMonitor && windowsNative.notificationState() === 'exclusive';
   const found = gameFinder.update(fg, now, isKnownProcess, { idleSeconds, exclusive });
+  if (found?.added) {
+    const why = gameFromPath(fg.path)
+      ? 'ligger i et spilbibliotek'
+      : exclusive
+        ? 'kører i eksklusiv fuldskærm'
+        : 'fyldte skærmen, mens du var aktiv';
+    logEvent(`Nyt spil tilføjet: ${found.added.name} – ${why}`);
+  } else if (found?.suggested) {
+    logEvent(`Foreslået som spil: ${found.suggested.name} (fyldte skærmen, men uden ret meget aktivitet)`);
+  }
   const same = (game) => (g) => normalizeProcessName(g.process) === normalizeProcessName(game.process);
   if (found?.added) {
     settings = store.saveSettings({
@@ -203,15 +250,33 @@ async function scanProcesses() {
   lastScanAt = Date.now();
   try {
     const processes = await listProcesses();
-    if (processes.length === 0) return; // kunne ikke læses – behold det, vi ved
+    if (processes.length === 0) {
+      // Kunne ikke læses – behold det, vi ved.
+      if (!scanInfo.failed) logEvent('Kunne ikke læse listen over kørende programmer');
+      scanInfo.failed = true;
+      return;
+    }
     // Kun Windows: hvilke af processerne har et synligt vindue?
     const pids = windowsNative.visibleWindowPids();
     const windowed = pids && processes.filter((p) => pids.has(p.pid)).map((p) => p.name);
+    const before = detected?.game ?? null;
     detected = gameDetector.update(
       processes.map((p) => p.name),
       allGames(),
       windowed,
     );
+    scanInfo = { at: Date.now(), processes: processes.length, windowCheck: windowed != null, failed: false };
+
+    const after = detected?.game ?? null;
+    if (before?.name !== after?.name) {
+      if (before) logEvent(`Spil lukket: ${before.name}`);
+      if (after) logEvent(`Spil fundet: ${after.name} (${gameKind(after)}, ${after.processes.join(', ')})`);
+    }
+    const windowless = gameDetector.windowless.join(', ');
+    if (windowless !== lastWindowless && windowless) {
+      logEvent(`${windowless} kører stadig, men har intet synligt vindue – regnes som lukket`);
+    }
+    lastWindowless = windowless;
   } finally {
     scanning = false;
   }
@@ -246,6 +311,7 @@ function tick() {
     backgroundThreshold: BACKGROUND_SECONDS,
   });
   lastIdleSeconds = idleSeconds;
+  if (lastPause.changed) logEvent(describePause(lastPause));
 
   runCommands(coach.tick({ now, pause: lastPause, idleSeconds, settings }));
   maybeInstallUpdate(now);
@@ -283,10 +349,15 @@ function startGsi() {
     getToken: () => settings.gsiToken,
     onPayload: (payload) => {
       const parsed = parseGsiPayload(payload);
-      if (parsed) gsiState = { ...parsed, at: Date.now() };
+      if (!parsed) return;
+      gsiState = { ...parsed, at: Date.now() };
+      const label = `${INTEGRATIONS[parsed.game]?.name ?? parsed.game} sender: ${parsed.label}`;
+      if (label !== lastGsiLabel) logEvent(label);
+      lastGsiLabel = label;
     },
     onError: (err) => {
       gsiError = err.code === 'EADDRINUSE' ? `Port ${settings.gsiPort} er allerede i brug.` : err.message;
+      logEvent(`CS2/Dota 2-integration: ${gsiError}`);
     },
   });
 }
@@ -380,7 +451,17 @@ function revealOverlay() {
   overlayShowPending = false;
   if (!overlayWindow || !coach.current) return;
   positionOverlay();
-  if (!overlayWindow.isVisible()) overlayWindow.showInactive(); // stjæl ikke fokus fra spillet
+  if (!overlayWindow.isVisible()) {
+    overlayWindow.showInactive(); // stjæl ikke fokus fra spillet
+    const display = overlayDisplay();
+    const all = screen.getAllDisplays();
+    const index = all.findIndex((d) => d.id === display.id);
+    const fs = fullscreenState();
+    logEvent(
+      `Overlay vist på skærm ${index + 1} af ${all.length} (${display.size.width}×${display.size.height})` +
+        (fs === 'exclusive' ? ' – spillet er i eksklusiv fuldskærm, så overlayet kan ikke ses' : ''),
+    );
+  }
   keepOnTop();
   // Mange spil lægger sig selv "altid øverst" igen og igen. Så længe overlayet
   // vises, lægger vi det øverst igen hvert halve sekund.
@@ -446,6 +527,15 @@ function todayText(now) {
   return describeToday(todaySummary(store.history, now, EXERCISES));
 }
 
+// Forklarer, hvis mængden er tilpasset brugeren (progression eller "For hårdt").
+function adjustText(suggestion) {
+  if (suggestion.eased) return 'Sat ned – den er også lettere næste gang';
+  const pct = Math.round(((suggestion.progress ?? 1) - 1) * 100);
+  if (pct >= 1) return `+${pct} % – du har klaret den før`;
+  if (pct <= -1) return `${pct} % efter "For hårdt"`;
+  return '';
+}
+
 function overlayPayload(current, fresh) {
   const { suggestion } = current;
   const ex = suggestion.exercise;
@@ -466,6 +556,8 @@ function overlayPayload(current, fresh) {
     },
     amount: suggestion.amount,
     unitLabel: engine.unitLabel(ex, suggestion.amount),
+    adjustText: adjustText(suggestion),
+    canEase: engine.easierSuggestion(suggestion) != null,
     sinceText: engine.describeTimeSince(suggestion.minutesSinceLast),
     setText: setProgressText(ex, current.settingsOverride || settings),
     hotkeys: { done: hotkeyLabel('done'), hide: hotkeyLabel('hide') },
@@ -477,8 +569,30 @@ function overlayPayload(current, fresh) {
 }
 
 // Udfører de kommandoer "træneren" (coach.js) beder om.
+const TRIGGER_NAMES = { pause: 'pause i spillet', manual: 'genvejstast eller knap', preview: 'eksempel' };
+const STATUS_NAMES = {
+  done: 'færdig',
+  skipped: 'sprunget over',
+  missed: 'ikke nået',
+  easier: '"For hårdt"',
+};
+
+function logCommand(cmd) {
+  if (cmd.type === 'show') {
+    const { suggestion, trigger } = cmd.current;
+    const what = `${suggestion.exercise.name}, ${engine.describeAmount(suggestion.exercise, suggestion.amount)}`;
+    logEvent(cmd.fresh ? `Øvelse vist: ${what} (${TRIGGER_NAMES[trigger] ?? trigger})` : `Øvelse ændret: ${what}`);
+  } else if (cmd.type === 'compact') {
+    logEvent('Øvelsen blev gjort lille – spillet er i gang igen');
+  } else if (cmd.type === 'record') {
+    const name = EXERCISES.find((e) => e.id === cmd.entry.exerciseId)?.name ?? cmd.entry.exerciseId;
+    logEvent(`Gemt: ${name} – ${STATUS_NAMES[cmd.entry.status] ?? cmd.entry.status}`);
+  }
+}
+
 function runCommands(commands) {
   for (const cmd of commands) {
+    logCommand(cmd);
     switch (cmd.type) {
       case 'show':
         sendOverlay('overlay:show', overlayPayload(cmd.current, cmd.fresh));
@@ -559,7 +673,7 @@ function overviewStatus() {
   }
 
   const signals = [];
-  const kind = definition?.custom ? 'tilføjet af dig' : definition?.auto ? 'fundet automatisk' : 'kendt spil';
+  const kind = gameKind(definition);
   signals.push({
     label: 'Spil',
     value: game ? `${game.name} (${kind})` : 'Intet spil kører',
@@ -620,6 +734,143 @@ function overviewStatus() {
   };
 }
 
+// --- Fejlfinding ---------------------------------------------------------------------
+
+const SPEAK_NAMES = { never: 'aldrig', fullscreen: 'i fuldskærm', always: 'altid' };
+const CORNER_NAMES = {
+  'top-right': 'øverst til højre',
+  'top-left': 'øverst til venstre',
+  'bottom-right': 'nederst til højre',
+  'bottom-left': 'nederst til venstre',
+};
+
+// Alt hvad fejlfindingssiden viser – også det, der kopieres som rapport.
+// Kun programnavne (ingen filstier eller vinduestitler), så rapporten kan deles.
+function debugSections(now) {
+  const caps = windowsNative.capabilities();
+  const yesNo = (v) => (v == null ? 'ukendt' : v ? 'ja' : 'nej');
+  const ago = (t) => `${Math.max(0, Math.round((now - t) / 1000))} sek. siden`;
+  const game = detected?.game ?? null;
+  const fg = focus.foreground;
+  const update = updater.status();
+  const plan = engine.dailyPlan(EXERCISES, settings, store.history, now);
+  const fsNative = windowsNative.notificationState();
+  const next = coach.nextAllowedAt(settings);
+  const c = coach.current;
+  const list = (items) => (items.length ? items.join(', ') : '–');
+
+  return [
+    {
+      title: 'App',
+      rows: [
+        ['Version', app.getVersion()],
+        ['System', `${process.platform} ${os.release()} (${process.arch}), Electron ${process.versions.electron}`],
+        ['Opdatering', describeUpdate(update) || update.state],
+        [
+          'Windows-funktioner',
+          `controller ${yesNo(caps.gamepads)}, fuldskærm ${yesNo(caps.fullscreenDetection)}, ` +
+            `forgrundsvindue ${yesNo(caps.foregroundWindow)}, vinduesliste ${yesNo(caps.windowList)}`,
+        ],
+        [
+          'Genvejstaster',
+          Object.keys(HOTKEYS)
+            .map((id) => `${hotkeyLabel(id)} ${hotkeyStatus[id] === false ? 'virker ikke' : 'ok'}`)
+            .join(', '),
+        ],
+      ],
+    },
+    {
+      title: 'Spil',
+      rows: [
+        ['Spil', game ? `${game.name} (${gameKind(game)})` : 'Intet spil kører'],
+        ['Programnavne', game ? game.processes.join(', ') : '–'],
+        ['Lobby eller kamp', detected?.phase === 'lobby' ? 'lobby' : detected?.phase === 'match' ? 'kamp' : '–'],
+        [
+          'Sidste scanning',
+          scanInfo.at
+            ? `${ago(scanInfo.at)} – ${scanInfo.processes} programmer` +
+              (scanInfo.windowCheck ? ', med tjek af synlige vinduer' : '')
+            : 'endnu ikke',
+        ],
+        ['Kører uden vindue', list(gameDetector.windowless)],
+        [
+          'I forgrunden',
+          fg
+            ? `${exeName(fg.path)}${fg.coversMonitor ? ', fylder skærmen' : ''}${fg.minimized ? ', minimeret' : ''}`
+            : 'ukendt',
+        ],
+        ['Spillet i forgrunden', game ? yesNo(focus.gameFocused) : '–'],
+        [
+          'Fuldskærm',
+          fsNative === 'exclusive'
+            ? 'eksklusiv fuldskærm (overlayet kan ikke ses – øvelsen læses højt)'
+            : fsNative === 'fullscreen'
+              ? 'et program kører i fuld skærm'
+              : fsNative === 'normal'
+                ? 'nej'
+                : 'ukendt',
+        ],
+        ['Fundet automatisk', list(settings.autoGames.map((g) => `${g.name} (${g.process})`))],
+        ['Tilføjet af dig', list(settings.customGames.map((g) => `${g.name} (${g.process})`))],
+        ['Foreslået', list(settings.gameSuggestions.map((g) => g.process))],
+        ['Afvist', list(settings.ignoredGames)],
+      ],
+    },
+    {
+      title: 'Pauser',
+      rows: [
+        ['Tilstand', describePause(lastPause)],
+        [
+          'Sidste input',
+          `${Math.round(powerMonitor.getSystemIdleTime())} sek. siden (mus/tastatur)` +
+            (caps.gamepads ? `, ${Math.round(Math.min(gamepads.idleSeconds(now), 99999))} sek. (controller)` : ''),
+        ],
+        ['Controllere', caps.gamepads ? String(gamepads.connected) : 'kun på Windows'],
+        ['Inaktivitet giver pause', settings.useIdleDetection ? `ja, efter ${settings.idleSeconds} sek.` : 'nej'],
+        ['Alt-tab giver pause', settings.useFocusDetection ? `ja, efter ${BACKGROUND_SECONDS} sek.` : 'nej'],
+        ['Spillet i baggrunden', game && focus.backgroundSince != null ? ago(focus.backgroundSince) : '–'],
+        [
+          'CS2/Dota 2-integration',
+          gsiError
+            ? `fejl: ${gsiError}`
+            : gsiState
+              ? `${INTEGRATIONS[gsiState.game]?.name ?? gsiState.game}: ${gsiState.label} (${ago(gsiState.at)})`
+              : `lytter på port ${settings.gsiPort} – intet modtaget endnu`,
+        ],
+      ],
+    },
+    {
+      title: 'Øvelser',
+      rows: [
+        ['Vises nu', c ? `${c.suggestion.exercise.name} (${c.mode}, ${TRIGGER_NAMES[c.trigger] ?? c.trigger})` : 'nej'],
+        ['Næste øvelse tidligst', next > now ? `om ${Math.ceil((next - now) / 60000)} min.` : 'nu'],
+        ['Sat på pause', coach.snoozedUntil > now ? `til kl. ${formatClock(coach.snoozedUntil)}` : 'nej'],
+        ['Dagens sæt', plan.hasTargets ? `${plan.done} af ${plan.target}` : 'intet mål'],
+        ['Niveau', LEVELS.find((l) => l.id === settings.level)?.name ?? String(settings.level)],
+        ['Udstyr', list(settings.equipment.map((id) => EQUIPMENT.find((e) => e.id === id)?.name ?? id))],
+        [
+          'Fokus',
+          settings.focus.length
+            ? list(settings.focus.map((id) => FOCUS_AREAS.find((f) => f.id === id)?.name ?? id))
+            : 'hele kroppen',
+        ],
+        [
+          'Overlay',
+          `${CORNER_NAMES[settings.overlayPosition] ?? settings.overlayPosition}, oplæsning ${SPEAK_NAMES[settings.speak] ?? settings.speak}`,
+        ],
+      ],
+    },
+  ];
+}
+
+function debugReport(now) {
+  return formatReport({
+    title: `Workoutslop ${app.getVersion()} – fejlfinding (${new Date(now).toLocaleString('da-DK')})`,
+    sections: debugSections(now),
+    log: events.list(),
+  });
+}
+
 function statusText(now) {
   if (coach.snoozedUntil > now) return `Sat på pause til kl. ${formatClock(coach.snoozedUntil)}`;
   if (engine.dailyPlan(EXERCISES, settings, store.history, now).complete) return 'Dagens sæt er klaret – godt gået!';
@@ -650,13 +901,15 @@ function updatePayload() {
 }
 
 function onUpdateStatus(status) {
+  if (status.state !== lastUpdateState) logEvent(`Opdatering: ${describeUpdate(status) || status.state}`);
+  lastUpdateState = status.state;
   refreshTray(true);
   setupWindow?.webContents.send('updates:status', updatePayload());
   if (status.state === 'ready' && notifiedUpdateVersion !== status.version && Notification.isSupported()) {
     notifiedUpdateVersion = status.version;
     const notification = new Notification({
       title: `Workoutslop ${status.version} er klar`,
-      body: 'Opdateringen installeres, når du lukker appen. Klik her for at genstarte og opdatere nu.',
+      body: 'Den installeres af sig selv, når du ikke spiller. Klik her for at genstarte og opdatere nu.',
       icon: APP_ICON,
     });
     notification.on('click', () => updater.install());
@@ -773,6 +1026,7 @@ function registerHotkeys() {
       ok = false;
     }
     hotkeyStatus[id] = ok;
+    if (!ok) logEvent(`Genvejstasten ${hotkeyLabel(id)} kunne ikke bruges – et andet program har den måske`);
   }
 }
 
@@ -1020,6 +1274,19 @@ function registerIpc() {
     return { autoGames: settings.autoGames, gameSuggestions: settings.gameSuggestions };
   });
   ipcMain.on('updates:install', (event) => fromSetup(event) && updater.install());
+  ipcMain.handle('debug:status', (event) => {
+    if (!fromSetup(event)) return null;
+    const now = Date.now();
+    return {
+      sections: debugSections(now),
+      log: events.list().map((e) => ({ time: formatTime(e.at), text: e.text, count: e.count })),
+    };
+  });
+  ipcMain.handle('debug:copy', (event) => {
+    if (!fromSetup(event)) return false;
+    clipboard.writeText(debugReport(Date.now()));
+    return true;
+  });
 
   ipcMain.on('overlay:size', (event, height) => {
     if (!fromOverlay(event) || !Number.isFinite(height)) return;
@@ -1030,6 +1297,7 @@ function registerIpc() {
   ipcMain.on('overlay:complete', (event) => fromOverlay(event) && runCommands(coach.complete(Date.now())));
   ipcMain.on('overlay:skip', (event) => fromOverlay(event) && runCommands(coach.skip(Date.now())));
   ipcMain.on('overlay:reroll', (event) => fromOverlay(event) && runCommands(coach.reroll(Date.now())));
+  ipcMain.on('overlay:easier', (event) => fromOverlay(event) && runCommands(coach.easier(Date.now())));
   ipcMain.on('overlay:snooze', (event) => fromOverlay(event) && runCommands(coach.snooze(Date.now(), SNOOZE_MINUTES)));
   ipcMain.on('overlay:expand', (event) => fromOverlay(event) && runCommands(coach.expand()));
 }
@@ -1077,6 +1345,10 @@ function start() {
   coach.lastCompletedAt = engine.lastCompletedAt(store.history);
   updater = createUpdater({ onChange: onUpdateStatus, beforeInstall: markUpdating });
   const justUpdated = readUpdateMarker();
+  logEvent(
+    `Workoutslop ${app.getVersion()} startet${justUpdated ? ' efter en opdatering' : ''} ` +
+      `(${process.platform} ${os.release()})`,
+  );
 
   registerIpc();
   createOverlayWindow();

@@ -31,7 +31,7 @@
   let step = 0;
   let furthest = 0;
   let counts = null; // antal øvelser der passer, fra hovedprocessen
-  let view = 'step'; // 'overview' eller 'step'
+  let view = 'step'; // 'overview', 'debug' eller 'step'
 
   // Laver et element. Tekst sættes altid som tekst (ikke HTML), så brugerinput er sikkert.
   function el(tag, props = {}, children = []) {
@@ -676,10 +676,11 @@
 
   // --- Oversigt ------------------------------------------------------------------------
 
-  function showOverview() {
-    view = 'overview';
+  // Sider uden for de 6 trin (oversigt og fejlfinding).
+  function showPage(name) {
+    view = name;
     exercisePreview.hide();
-    for (const section of document.querySelectorAll('.step')) section.hidden = section.dataset.step !== 'overview';
+    for (const section of document.querySelectorAll('.step')) section.hidden = section.dataset.step !== name;
     for (const button of $('nav').querySelectorAll('button')) {
       button.removeAttribute('aria-current');
       button.disabled = false;
@@ -687,10 +688,59 @@
     }
     $('nav-overview').hidden = false;
     $('nav-heading').hidden = false;
-    $('nav-overview').setAttribute('aria-current', 'page');
+    $('nav-debug').hidden = false;
+    for (const [id, page] of [
+      ['nav-overview', 'overview'],
+      ['nav-debug', 'debug'],
+    ]) {
+      if (page === name) $(id).setAttribute('aria-current', 'page');
+      else $(id).removeAttribute('aria-current');
+    }
     document.querySelector('.footer').hidden = true;
     document.querySelector('.scroll').scrollTop = 0;
+  }
+
+  function showOverview() {
+    showPage('overview');
     refreshOverview();
+  }
+
+  function showDebug() {
+    showPage('debug');
+    $('debug-copied').textContent = '';
+    refreshDebug();
+  }
+
+  async function refreshDebug() {
+    const status = await api.debugStatus();
+    if (!status) return;
+    $('debug-sections').replaceChildren(
+      ...status.sections.map((section) =>
+        el('section', { class: 'panel' }, [
+          el('h2', { text: section.title }),
+          el(
+            'dl',
+            { class: 'signals' },
+            section.rows.flatMap(([label, value]) => [el('dt', { text: label }), el('dd', { text: value })]),
+          ),
+        ]),
+      ),
+    );
+    $('debug-log').replaceChildren(
+      ...(status.log.length === 0
+        ? [el('li', { class: 'empty', text: 'Ingen hændelser endnu.' })]
+        : status.log.map((entry) =>
+            el('li', {}, [
+              el('time', { text: entry.time }),
+              el('span', { text: entry.count > 1 ? `${entry.text} (×${entry.count})` : entry.text }),
+            ]),
+          )),
+    );
+  }
+
+  async function copyDebugReport() {
+    const ok = await api.copyDebugReport();
+    $('debug-copied').textContent = ok ? '✓ Kopieret – sæt den ind i en besked med Ctrl+V' : 'Kunne ikke kopiere';
   }
 
   async function refreshOverview() {
@@ -854,6 +904,7 @@
     furthest = Math.max(furthest, step);
     for (const section of document.querySelectorAll('.step')) section.hidden = section.dataset.step !== String(step);
     $('nav-overview').removeAttribute('aria-current');
+    $('nav-debug').removeAttribute('aria-current');
     document.querySelector('.footer').hidden = false;
 
     for (const button of $('nav').querySelectorAll('button')) {
@@ -908,6 +959,9 @@
     $('preview').addEventListener('click', preview);
 
     $('nav-overview').addEventListener('click', showOverview);
+    $('nav-debug').addEventListener('click', showDebug);
+    $('ov-debug').addEventListener('click', showDebug);
+    $('debug-copy').addEventListener('click', copyDebugReport);
     $('ov-now').addEventListener('click', () => api.exerciseNow());
     $('ov-pause').addEventListener('click', async () => {
       const status = await api.status();
@@ -971,7 +1025,10 @@
     if (data.firstRun) goTo(0);
     else showOverview();
     // Oversigten opdateres løbende, mens den vises.
-    setInterval(() => view === 'overview' && refreshOverview(), 2000);
+    setInterval(() => {
+      if (view === 'overview') refreshOverview();
+      else if (view === 'debug') refreshDebug();
+    }, 2000);
   }
 
   init();

@@ -282,3 +282,64 @@ test('skuldre, ryg og triceps kan trænes uden vægte', () => {
   const band = groups(['resistanceBand']);
   for (const g of ['back', 'posture', 'biceps', 'triceps']) assert.ok(band.has(g), `elastik: ${g}`);
 });
+
+test('sværhedsgrad: begyndere får mest lette øvelser, stærke mest svære', () => {
+  const easy = { ...byId('kneePushup') };
+  const hard = { ...byId('diamondPushup') };
+  assert.ok(engine.difficultyWeight(1, 1) > engine.difficultyWeight(1, 3) * 5);
+  assert.ok(engine.difficultyWeight(4, 3) > engine.difficultyWeight(4, 1));
+  // Med to mulige øvelser vælges den lette langt oftest på niveau 1.
+  const pick = (level) => {
+    const settings = { level, equipment: [], focus: [] };
+    const exercises = [
+      { ...easy, amounts: [5, 5, 5, 5] },
+      { ...hard, amounts: [5, 5, 5, 5] },
+    ];
+    let hardCount = 0;
+    for (let i = 0; i < 200; i++) {
+      const r = (i + 0.5) / 200;
+      const ex = engine.chooseExercise({ exercises, settings, history: [], now: 0, random: () => r });
+      if (ex.id === hard.id) hardCount++;
+    }
+    return hardCount;
+  };
+  assert.ok(pick(1) < 40, `niveau 1: ${pick(1)} svære ud af 200`);
+  assert.ok(pick(4) > 100, `niveau 4: ${pick(4)} svære ud af 200`);
+});
+
+test('progression: hver 3. gennemførte gang bliver øvelsen 5 % sværere', () => {
+  const done = (id, at, level = 2) => ({ at, exerciseId: id, muscleGroup: 'chest', status: 'done', level });
+  assert.equal(engine.progressionFactor([], 'pushup', 2), 1);
+  const six = [1, 2, 3, 4, 5, 6].map((t) => done('pushup', t));
+  assert.ok(Math.abs(engine.progressionFactor(six, 'pushup', 2) - 1.05 * 1.05) < 1e-9);
+  // Andre øvelser og andre niveauer tæller ikke.
+  assert.equal(engine.progressionFactor(six, 'squat', 2), 1);
+  assert.equal(engine.progressionFactor(six, 'pushup', 3), 1);
+  // Højst +50 %.
+  const many = Array.from({ length: 300 }, (_, i) => done('pushup', i));
+  assert.equal(engine.progressionFactor(many, 'pushup', 2), 1.5);
+  // "For hårdt" sætter den 20 % ned og starter tællingen forfra.
+  const eased = [...six, { at: 7, exerciseId: 'pushup', status: 'easier', level: 2 }];
+  assert.ok(Math.abs(engine.progressionFactor(eased, 'pushup', 2) - 1.05 * 1.05 * 0.8) < 1e-9);
+
+  // Mængden i forslaget følger med.
+  const settings = { level: 2, equipment: [], focus: ['chestShoulders'], disabledExercises: [] };
+  const only = [byId('pushup')];
+  const s1 = engine.createSuggestion({ exercises: only, settings, history: [], now: 0 });
+  const s2 = engine.createSuggestion({ exercises: only, settings, history: many, now: 1e12 });
+  assert.equal(s1.amount, 10);
+  assert.equal(s2.amount, 15);
+  assert.equal(s2.progress, 1.5);
+  assert.equal(s2.level, 2);
+});
+
+test('"For hårdt" sætter mængden ned, men aldrig under minimum', () => {
+  const reps = { exercise: byId('pushup'), amount: 10 };
+  assert.equal(engine.easierSuggestion(reps).amount, 7);
+  assert.equal(engine.easierSuggestion(reps).eased, true);
+  assert.equal(engine.easierSuggestion({ exercise: byId('pushup'), amount: 2 }).amount, 1);
+  assert.equal(engine.easierSuggestion({ exercise: byId('pushup'), amount: 1 }), null);
+  const seconds = { exercise: byId('plank'), amount: 30 };
+  assert.equal(engine.easierSuggestion(seconds).amount, 20);
+  assert.equal(engine.easierSuggestion({ exercise: byId('plank'), amount: 10 }), null);
+});

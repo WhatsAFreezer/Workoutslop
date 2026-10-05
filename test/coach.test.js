@@ -103,6 +103,31 @@ test('lukker man spillet, forsvinder øvelsen fra pausen', () => {
   assert.deepEqual(types(coach.tick({ now: 2000, pause: noGame, idleSeconds: 0, settings })), ['record', 'hide']);
 });
 
+test('"For hårdt" viser samme øvelse med lavere mængde og husker det', () => {
+  const coach = new Coach({
+    suggest: () => ({ exercise: { id: 'ex1', muscleGroup: 'chest', unit: 'reps' }, amount: 10, level: 2 }),
+    ease: (s) => (s.amount > 1 ? { ...s, amount: s.amount - 3, eased: true } : null),
+  });
+  coach.tick({ now: 0, pause: pause(), idleSeconds: 0, settings });
+  const cmds = coach.easier(1000);
+  assert.deepEqual(types(cmds), ['record', 'show']);
+  assert.deepEqual(cmds[0].entry, {
+    at: 1000,
+    exerciseId: 'ex1',
+    muscleGroup: 'chest',
+    amount: 7,
+    unit: 'reps',
+    status: 'easier',
+    level: 2,
+  });
+  assert.equal(cmds[1].fresh, false);
+  assert.equal(coach.current.suggestion.amount, 7);
+  // Færdig gemmer den lavere mængde.
+  assert.equal(coach.complete(2000)[0].entry.amount, 7);
+  // Uden øvelse sker der ingenting.
+  assert.deepEqual(coach.easier(3000), []);
+});
+
 test('øvelser man selv beder om bliver stående', () => {
   const { coach, calls } = makeCoach();
   assert.deepEqual(types(coach.requestNow(0)), ['show']);

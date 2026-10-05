@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld('workoutslop', {
     pauseFor: (minutes) => ipcRenderer.send('app:pause', minutes),
     resume: () => ipcRenderer.send('app:resume'),
     updateGames: (action, processName) => ipcRenderer.invoke('games:update', { action, process: processName }),
+    debugStatus: () => ipcRenderer.invoke('debug:status'),
+    copyDebugReport: () => ipcRenderer.invoke('debug:copy'),
   },
   overlay: {
     onShow: listen('overlay:show'),
@@ -38,6 +40,7 @@ contextBridge.exposeInMainWorld('workoutslop', {
     complete: () => ipcRenderer.send('overlay:complete'),
     skip: () => ipcRenderer.send('overlay:skip'),
     reroll: () => ipcRenderer.send('overlay:reroll'),
+    easier: () => ipcRenderer.send('overlay:easier'),
     snooze: () => ipcRenderer.send('overlay:snooze'),
     expand: () => ipcRenderer.send('overlay:expand'),
   },

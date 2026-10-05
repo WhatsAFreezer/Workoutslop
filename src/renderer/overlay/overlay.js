@@ -44,6 +44,8 @@
     $('amount').textContent = next.amount;
     $('unit').textContent = next.unitLabel;
     $('set-progress').textContent = next.setText || '';
+    $('adjust').textContent = next.adjustText || '';
+    $('easier').hidden = !next.canEase;
 
     const steps = $('steps');
     steps.replaceChildren(
@@ -157,6 +159,7 @@
   $('close').addEventListener('click', () => api.skip());
   $('compact-close').addEventListener('click', () => api.skip());
   $('reroll').addEventListener('click', () => api.reroll());
+  $('easier').addEventListener('click', () => api.easier());
   $('snooze').addEventListener('click', () => api.snooze());
   $('compact-open').addEventListener('click', () => api.expand());
   $('timer-btn').addEventListener('click', startTimer);

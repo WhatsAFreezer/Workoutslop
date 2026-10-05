@@ -29,3 +29,29 @@ test('dage i træk', () => {
   // Kun "spring over" tæller ikke.
   assert.equal(streakDays([{ ...done(at(5)), status: 'skipped' }], now), 0);
 });
+
+test('hændelsesloggen tæller gentagelser op og holder en grænse', () => {
+  const { EventLog, formatReport } = require('../src/core/event-log');
+  const log = new EventLog(3);
+  log.add('a', 1000);
+  log.add('b', 2000);
+  log.add('b', 3000);
+  log.add('c', 4000);
+  log.add('d', 5000);
+  const list = log.list();
+  assert.deepEqual(
+    list.map((e) => [e.text, e.count]),
+    [
+      ['d', 1],
+      ['c', 1],
+      ['b', 2],
+    ],
+  );
+  const report = formatReport({
+    title: 'Rapport',
+    sections: [{ title: 'App', rows: [['Version', '1.0']] }],
+    log: list,
+  });
+  assert.match(report, /^Rapport\n\n## App\nVersion: 1\.0\n\n## Hændelser \(nyeste først\)\n/);
+  assert.match(report, /b \(×2\)/);
+});

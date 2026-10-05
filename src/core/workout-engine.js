@@ -21,6 +21,28 @@ const TIME_CURVE = [
 // Efter så lang tid starter vi forfra med normal mængde, fordi man ikke er varmet op.
 const FRESH_START_MINUTES = 6 * 60;
 
+// Hvor gerne en øvelse vælges ud fra dens sværhedsgrad [let, middel, svær] på hvert
+// styrkeniveau. En begynder får mest lette øvelser, en stærk mest de svære.
+const DIFFICULTY_WEIGHT = {
+  1: [1, 0.5, 0.15],
+  2: [1, 1, 0.4],
+  3: [0.7, 1, 1],
+  4: [0.5, 1, 1.2],
+};
+
+// Progression: hver 3. gang en øvelse gennemføres, bliver den 5 % sværere (højst +50 %).
+// "For hårdt" gør den 20 % lettere fremover (højst ned til det halve).
+const PROGRESS_EVERY = 3;
+const PROGRESS_STEP = 1.05;
+const PROGRESS_MAX = 1.5;
+const EASIER_STEP = 0.8;
+const PROGRESS_MIN = 0.5;
+// Trykker man "For hårdt" under en øvelse, sættes mængden straks så meget ned.
+const EASIER_NOW = 0.7;
+
+// Statusser i historikken: 'done', 'skipped', 'missed' – og 'easier' når brugeren har trykket "For hårdt".
+const isAttempt = (entry) => entry.status === 'done' || entry.status === 'skipped' || entry.status === 'missed';
+
 function timeFactor(minutesSinceLast) {
   if (minutesSinceLast == null || !Number.isFinite(minutesSinceLast)) return 1;
   if (minutesSinceLast >= FRESH_START_MINUTES) return 1;
@@ -110,14 +132,53 @@ function dailyPlan(exercises, settings, history, now) {
   return { perGroup, target, done: doneTotal, hasTargets, complete };
 }
 
-function computeAmount(exercise, level, minutesSinceLast) {
+function difficultyWeight(level, difficulty) {
+  return DIFFICULTY_WEIGHT[level]?.[(difficulty || 2) - 1] ?? 1;
+}
+
+// Hvor meget en øvelse er justeret for brugeren på dette niveau: 1 = som udgangspunkt.
+// Ældre historik uden niveau tæller med.
+function progressionFactor(history, exerciseId, level) {
+  let factor = 1;
+  let streak = 0;
+  for (const entry of history) {
+    if (entry.exerciseId !== exerciseId || (entry.level != null && entry.level !== level)) continue;
+    if (entry.status === 'done') {
+      streak++;
+      if (streak >= PROGRESS_EVERY) {
+        factor = Math.min(PROGRESS_MAX, factor * PROGRESS_STEP);
+        streak = 0;
+      }
+    } else if (entry.status === 'easier') {
+      factor = Math.max(PROGRESS_MIN, factor * EASIER_STEP);
+      streak = 0;
+    }
+  }
+  return factor;
+}
+
+const MIN_SECONDS = 10;
+
+// Sekunder rundes til nærmeste 5, så det er let at tælle.
+function roundAmount(exercise, raw) {
+  return exercise.unit === 'seconds' ? Math.max(MIN_SECONDS, Math.round(raw / 5) * 5) : Math.max(1, Math.round(raw));
+}
+
+function computeAmount(exercise, level, minutesSinceLast, progress = 1) {
   const base = baseAmount(exercise, level);
   if (base == null) return null;
   const factor = timeFactor(minutesSinceLast);
-  const raw = base * factor;
-  // Sekunder rundes til nærmeste 5, så det er let at tælle.
-  const amount = exercise.unit === 'seconds' ? Math.max(10, Math.round(raw / 5) * 5) : Math.max(1, Math.round(raw));
-  return { amount, base, factor };
+  return { amount: roundAmount(exercise, base * factor * progress), base, factor };
+}
+
+// "For hårdt": samme øvelse med færre gentagelser/sekunder – eller null, hvis den
+// allerede er så lav, som den kan blive.
+function easierSuggestion(suggestion) {
+  const { exercise, amount } = suggestion;
+  let next = roundAmount(exercise, amount * EASIER_NOW);
+  if (next >= amount) next = roundAmount(exercise, amount - (exercise.unit === 'seconds' ? 5 : 1));
+  if (next >= amount) return null;
+  return { ...suggestion, amount: next, eased: true };
 }
 
 function lastCompletedAt(history) {
@@ -158,11 +219,11 @@ function chooseExercise({
   const from = startOfDay(now);
   const doneToday = history.filter((h) => h.status === 'done' && h.at >= from);
 
-  const recent = history.filter((h) => now - h.at < 60 * MINUTE && h.status !== 'preview');
+  const recent = history.filter((h) => now - h.at < 60 * MINUTE && isAttempt(h));
   const last = recent.length > 0 ? recent[recent.length - 1] : null;
 
   const weights = pool.map((ex) => {
-    let w = 1;
+    let w = difficultyWeight(effective.level, ex.difficulty);
     // Brugeren har valgt udstyret af en grund – brug det lidt oftere.
     if (ex.equipment.length > 0) w *= 1.6;
     const timesRecently = recent.filter((h) => h.exerciseId === ex.id).length;
@@ -191,8 +252,9 @@ function createSuggestion({ exercises, settings, history, now, random, exclude, 
   if (!exercise) return null;
   const lastDone = lastCompletedAt(history);
   const minutesSinceLast = Number.isFinite(lastDone) ? (now - lastDone) / MINUTE : null;
-  const { amount, factor } = computeAmount(exercise, settings.level, minutesSinceLast);
-  return { exercise, amount, factor, minutesSinceLast, createdAt: now };
+  const progress = progressionFactor(history, exercise.id, settings.level);
+  const { amount, factor } = computeAmount(exercise, settings.level, minutesSinceLast, progress);
+  return { exercise, amount, factor, progress, level: settings.level, minutesSinceLast, createdAt: now };
 }
 
 function unitLabel(exercise, amount) {
@@ -227,7 +289,10 @@ module.exports = {
   availableExercises,
   setsDoneToday,
   dailyPlan,
+  difficultyWeight,
+  progressionFactor,
   computeAmount,
+  easierSuggestion,
   lastCompletedAt,
   chooseExercise,
   createSuggestion,

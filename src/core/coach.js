@@ -21,9 +21,11 @@ const ACTIVE_IDLE_SECONDS = 3;
 
 class Coach {
   // suggest(now, excludeIds, settingsOverride, { ignoreTargets }) skal returnere et forslag eller null
-  // (null fx når dagens sæt er lavet).
-  constructor({ suggest }) {
+  // (null fx når dagens sæt er lavet). ease(suggestion) giver samme øvelse med en lavere mængde
+  // – eller null, hvis den ikke kan blive lavere.
+  constructor({ suggest, ease = () => null }) {
     this.suggest = suggest;
+    this.ease = ease;
     this.current = null;
     this.snoozedUntil = 0;
     this.lastCompletedAt = -Infinity;
@@ -109,7 +111,11 @@ class Coach {
     if (c.trigger === 'preview') return [{ type: 'hide' }];
     if (status === 'done') this.lastCompletedAt = now;
     else this.lastDismissedAt = now;
-    const { exercise, amount } = c.suggestion;
+    return [{ type: 'record', entry: this.entry(now, c.suggestion, status) }, { type: 'hide' }];
+  }
+
+  entry(now, suggestion, status) {
+    const { exercise, amount, level } = suggestion;
     const entry = {
       at: now,
       exerciseId: exercise.id,
@@ -118,7 +124,22 @@ class Coach {
       unit: exercise.unit,
       status,
     };
-    return [{ type: 'record', entry }, { type: 'hide' }];
+    if (level != null) entry.level = level;
+    return entry;
+  }
+
+  // "For hårdt": samme øvelse med en lavere mængde. Huskes, så den også er lettere næste gang.
+  easier(now) {
+    const c = this.current;
+    if (!c) return [];
+    const next = this.ease(c.suggestion);
+    if (!next) return [];
+    c.suggestion = next;
+    c.mode = 'full';
+    c.compactSince = null;
+    const show = { type: 'show', current: c, fresh: false };
+    if (c.trigger === 'preview') return [show];
+    return [{ type: 'record', entry: this.entry(now, next, 'easier') }, show];
   }
 
   complete(now) {
