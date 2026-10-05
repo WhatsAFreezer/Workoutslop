@@ -15,6 +15,11 @@
   --warn: #fbbf24;
   --danger: #f87171;
 
+  /* Søjler og målere i oversigten (tjekket mod den mørke baggrund). */
+  --chart-fill: #16a34a;
+  --chart-fill-hover: #22c55e;
+  --chart-track: rgba(22, 163, 74, 0.18);
+
   --fig-color: #e9eef7;
   --fig-prop: #556074;
   --fig-weight: #4ade80;

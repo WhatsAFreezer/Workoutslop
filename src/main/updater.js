@@ -11,8 +11,14 @@ const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 function friendlyError(err) {
   const message = String(err?.message || err || '');
-  if (/\b404\b|Not Found|No published versions|Cannot find latest/i.test(message)) {
-    return 'Der er ikke udgivet nogen version endnu (eller GitHub-repoet er privat).';
+  if (/latest\.yml/i.test(message)) {
+    return 'Den nyeste udgivelse på GitHub mangler filen latest.yml. Udgiv nye versioner med "Udgiv ny version" under Actions på GitHub.';
+  }
+  if (/semver|Invalid Version|not a valid version/i.test(message)) {
+    return 'Den nyeste udgivelse på GitHub har ikke et versionsnummer (fx v0.1.1).';
+  }
+  if (/\b404\b|Not Found|No published versions/i.test(message)) {
+    return 'Der er ikke udgivet nogen version på GitHub endnu.';
   }
   if (
     /ENOTFOUND|ENETUNREACH|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|ERR_INTERNET_DISCONNECTED|ERR_NAME_NOT_RESOLVED|ERR_CONNECTION/i.test(
@@ -26,7 +32,8 @@ function friendlyError(err) {
 }
 
 // status.state: 'dev' | 'idle' | 'checking' | 'latest' | 'downloading' | 'ready' | 'error'
-function createUpdater({ onChange }) {
+// beforeInstall(version) kaldes lige før appen lukker for at installere.
+function createUpdater({ onChange, beforeInstall = () => {} }) {
   let status = { state: app.isPackaged ? 'idle' : 'dev', currentVersion: app.getVersion() };
   const set = (patch) => {
     status = { ...status, ...patch };
@@ -73,8 +80,10 @@ function createUpdater({ onChange }) {
     },
     check,
     install() {
+      if (status.state !== 'ready') return;
+      beforeInstall(status.version);
       // Stille installation, og appen starter selv igen bagefter.
-      if (status.state === 'ready') autoUpdater.quitAndInstall(true, true);
+      autoUpdater.quitAndInstall(true, true);
     },
   };
 }
@@ -91,7 +100,7 @@ function describeUpdate(status) {
     case 'downloading':
       return `Henter version ${status.version}… ${status.percent ?? 0} %`;
     case 'ready':
-      return `Version ${status.version} er klar til at blive installeret`;
+      return `Version ${status.version} er hentet og installeres, så snart du ikke spiller`;
     case 'error':
       return `Kunne ikke søge efter opdateringer: ${status.error}`;
     default:

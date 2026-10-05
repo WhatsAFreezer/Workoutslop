@@ -22,8 +22,12 @@ const DEFAULT_SETTINGS = {
   setsPerDay: { ...DEFAULT_SETS_PER_DAY },
   minMinutesBetween: 10,
   useIdleDetection: true,
+  useFocusDetection: true, // pause når spillet er i baggrunden (alt-tab)
   idleSeconds: 25,
   customGames: [],
+  autoGames: [], // spil fundet automatisk i spilbibliotekerne
+  gameSuggestions: [], // programmer der kørte i fuld skærm – måske spil
+  ignoredGames: [], // procesnavne brugeren har sagt ikke er spil
   overlayPosition: 'top-right',
   sound: true,
   speak: 'fullscreen', // læs øvelsen højt: 'never' | 'fullscreen' (kun når overlayet ikke kan ses) | 'always'
@@ -98,8 +102,14 @@ function normalizeSettings(raw = {}) {
     setsPerDay: normalizeSetsPerDay(raw.setsPerDay),
     minMinutesBetween: clampInt(raw.minMinutesBetween, 1, 120, d.minMinutesBetween),
     useIdleDetection: raw.useIdleDetection == null ? d.useIdleDetection : Boolean(raw.useIdleDetection),
+    useFocusDetection: raw.useFocusDetection == null ? d.useFocusDetection : Boolean(raw.useFocusDetection),
     idleSeconds: clampInt(raw.idleSeconds, 10, 120, d.idleSeconds),
     customGames: normalizeCustomGames(raw.customGames),
+    autoGames: normalizeCustomGames(raw.autoGames),
+    gameSuggestions: normalizeCustomGames(raw.gameSuggestions).slice(0, 10),
+    ignoredGames: Array.isArray(raw.ignoredGames)
+      ? [...new Set(raw.ignoredGames.map((n) => String(n).trim().toLowerCase()).filter(Boolean))].slice(0, 100)
+      : [],
     overlayPosition: OVERLAY_POSITIONS.includes(raw.overlayPosition) ? raw.overlayPosition : d.overlayPosition,
     sound: raw.sound == null ? d.sound : Boolean(raw.sound),
     speak: SPEAK_MODES.includes(raw.speak) ? raw.speak : d.speak,

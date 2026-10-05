@@ -34,7 +34,11 @@ Linket giver altid den nyeste version, og appen opdaterer sig selv bagefter.
    - **Spil** – de spil appen kender, dine egne spil og den præcise integration til CS2 og Dota 2.
 
    <img src="docs/setup.png" width="640" alt="Opsætningen: valg af redskaber">
-2. **Spil som normalt.** Workoutslop opdager selv, når et spil kører.
+   Når opsætningen er gemt, viser vinduet **Oversigten**: om du spiller eller holder pause, hvad Workoutslop
+   registrerer lige nu (spil, vindue, input, controller), dagens sæt pr. muskelgruppe og en graf over de sidste
+   7 dage. Det er også den side, du ser, når du åbner Workoutslop fra startmenuen.
+2. **Spil som normalt.** Workoutslop opdager selv, når et spil kører, og viser øvelsen på den skærm, spillet
+   kører på.
 3. **Lav øvelsen, når overlayet dukker op**, og tryk **Færdig**. Du kan også vælge **Anden** (en anden
    øvelse), **Om 10 min** (udsæt) eller **✕** (spring over).
 4. Starter næste kamp, før du har trykket på noget, bliver overlayet til en lille bjælke: "Nåede du det?"
@@ -60,7 +64,12 @@ Fra bakkeikonet kan du også skifte fokus (**Træn: …**), søge efter opdateri
 
 Hvert 5. sekund henter appen listen over kørende programmer (`tasklist` på Windows, `ps` på macOS/Linux) og
 sammenligner med en liste over kendte spil, fx `cs2.exe`, `VALORANT-Win64-Shipping.exe` og
-`RocketLeague.exe`. Du kan selv tilføje flere spil i opsætningen.
+`RocketLeague.exe`.
+
+På Windows ser appen desuden, hvilket program der er i forgrunden. Ligger det i et spilbibliotek (Steam, Epic,
+Riot, Xbox, GOG, Ubisoft, EA eller Rockstar), bliver det automatisk tilføjet som spil. Programmer, der kører i
+fuld skærm i et stykke tid, bliver foreslået som mulige spil under **Spil** i opsætningen. Du kan også selv
+tilføje spil.
 
 ### 2. Er der en pause?
 
@@ -70,6 +79,7 @@ Appen bruger det bedste signal, den har for det spil, du spiller:
 | ------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------- |
 | **Game State Integration** | Counter-Strike 2, Dota 2     | Spillet sender selv sin tilstand til appen. Pause = i menuen eller kampen er slut.        |
 | **Lobby/kamp-processer**  | League of Legends             | Klienten kører hele tiden, men selve kampen er et separat program. Kun klient = lobby.   |
+| **Spillet i baggrunden**  | Alle spil (Windows)           | Har du alt-tabbet ud af spillet i mere end 15 sekunder (fx mens du venter i kø), er det en pause. |
 | **Inaktivitet**           | Alle andre spil               | Ingen mus, tastatur eller controller i fx 25 sekunder, mens spillet kører = kø, loadingskærm eller lobby. |
 
 De præcise signaler skal være stabile i 2 sekunder, før appen tror på dem, så et enkelt mærkeligt
@@ -139,6 +149,7 @@ src/
     gsi.js                 CS2/Dota 2 Game State Integration
     pause-detector.js      Afgør om der er pause lige nu
     gamepad-activity.js    Afgør om controller-input er rigtig aktivitet
+    game-detection.js      Finder nye spil i spilbiblioteker og fuldskærmsprogrammer
     coach.js               Bestemmer hvornår overlayet vises, gøres lille eller skjules
     settings.js, stats.js  Indstillinger og dagens statistik
   main/                    Electron-hovedprocessen
@@ -148,7 +159,7 @@ src/
     gsi-install.js         Finder spillet i Steam og installerer cfg-filen
     updater.js             Søger efter, henter og installerer nye versioner
     process-list.js        Henter listen over kørende programmer
-    windows-native.js      Controller (XInput) og fuldskærmsdetektion via Windows
+    windows-native.js      Controller, fuldskærm, forgrundsvindue og "altid øverst" via Windows
     store.js               Gemmer indstillinger og historik som JSON
   renderer/                Det brugeren ser
     setup/                 Opsætningen (6 trin)
@@ -159,7 +170,7 @@ src/
 test/                      Automatiske tests (node --test)
 tools/gallery.html         Viser alle animationer – åbn filen i en browser
 assets/                    Ikoner til appen og systembakken
-.github/workflows/         Bygger Windows-programmet automatisk på GitHub
+.github/workflows/         Bygger Windows-programmet og udgiver nye versioner på GitHub
 ```
 
 Indstillinger og historik gemmes i `%APPDATA%\Workoutslop` på Windows (`~/Library/Application Support/Workoutslop`
@@ -211,27 +222,27 @@ træningshistorik bliver liggende, så de er der, hvis du installerer igen.
 
 Den installerede app holder sig selv opdateret:
 
-1. Ved opstart og derefter hver 6. time tjekker den, om der er udgivet en ny version på GitHub.
-2. Findes der en, hentes den i baggrunden, og du får en besked, når den er klar.
-3. Opdateringen installeres, næste gang du lukker Workoutslop – eller med det samme, hvis du vælger
-   **Genstart og opdatér** i bakkemenuen eller i opsætningen.
+1. Ved opstart, efter dvale og derefter hver 6. time tjekker den, om der er udgivet en ny version på GitHub.
+2. Findes der en, hentes den i baggrunden.
+3. Når der ikke har kørt et spil i et par minutter, installeres den nye version, og appen genstarter stille i
+   baggrunden. Du får en besked, når det er sket. Vil du ikke vente, så vælg **Genstart og opdatér** i
+   bakkemenuen eller nederst i sidebjælken.
 
-Du kan også selv vælge **Søg efter opdateringer** i bakkemenuen eller nederst i opsætningens sidebjælke, hvor
-den nuværende version også står.
+Den nuværende version står nederst i sidebjælken, hvor du også kan vælge **Søg efter opdateringer**.
 
 ### Udgiv en ny version
 
-```bash
-npm run release
-```
+1. Gå til fanen **Actions** på GitHub og vælg **Udgiv ny version** i listen til venstre.
+2. Klik **Run workflow**, vælg hvor stor ændringen er (normalt *patch*), og klik **Run workflow** igen.
 
-Kommandoen hæver versionsnummeret (fx 0.1.0 → 0.1.1), laver et git-tag og pusher det. Så bygger
-`.github/workflows/build.yml` installationsprogrammet på en Windows-maskine hos GitHub og lægger det op under
-**Releases** sammen med filen `latest.yml`, som de installerede apps bruger til at finde opdateringen.
+GitHub hæver versionsnummeret (fx 0.1.0 → 0.1.1), tester og bygger appen på en Windows-maskine og lægger
+`Workoutslop-Setup.exe` op under **Releases** sammen med filen `latest.yml`. Det er den fil, de installerede
+apps bruger til at finde opdateringen – så udgiv altid nye versioner på den måde og ikke ved at oprette en
+release i hånden.
 
-> **Vigtigt:** Appen henter opdateringer fra GitHub Releases uden at logge ind. Det virker kun, hvis repoet er
-> **offentligt**. Er repoet privat, viser appen "Der er ikke udgivet nogen version endnu (eller GitHub-repoet er
-> privat)". Repoet kan gøres offentligt under **Settings → General → Danger Zone → Change visibility**.
+(Fra en terminal kan du gøre det samme med `npm run release`.)
+
+> Appen henter opdateringer fra GitHub uden at logge ind, så repoet skal være **offentligt**.
 
 ### Byg selv
 
@@ -256,11 +267,13 @@ Tilføj spillets procesnavn til `KNOWN_GAMES` i `src/core/games.js`, eller tilf�
 
 ## Kendte begrænsninger
 
-- I **eksklusiv fuldskærm** kan overlayet ikke ses – øvelsen læses højt i stedet. Oplæsningen kræver en dansk
-  stemme i Windows (**Indstillinger → Tid og sprog → Tale**); ellers bruges en engelsk stemme. Tryk
-  **Prøv oplæsning** under Pauser for at høre den.
+- I **eksklusiv fuldskærm** kan intet program vises ovenpå et spil. Workoutslop opdager det, viser en
+  advarsel i oversigten og læser øvelsen højt. Vil du se overlayet, så vælg *kantløst vindue* / *fuldskærm i
+  vindue* i spillets grafikindstillinger. I kantløs fuldskærm lægger appen overlayet øverst igen hvert halve
+  sekund, så spil, der selv lægger sig øverst, ikke dækker det.
+- Oplæsningen kræver en dansk stemme i Windows (**Indstillinger → Tid og sprog → Tale**); ellers bruges en
+  engelsk stemme. Tryk **Prøv oplæsning** under Pauser for at høre den.
 - **Controllere** aflæses via XInput: Xbox-controllere og de fleste pc-controllere virker. En PlayStation-
   controller virker, hvis Steam Input eller DS4Windows er slået til.
-- Overlayet vises på hovedskærmen.
 - Valorant, Fortnite og de fleste andre spil har ingen officiel måde at fortælle, hvornår en kamp slutter.
-  Derfor bruges inaktivitet for dem.
+  Derfor bruges alt-tab og inaktivitet for dem.

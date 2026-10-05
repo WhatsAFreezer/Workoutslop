@@ -3,6 +3,7 @@
 // Hovedprocessen: holder styr på vinduer, bakkeikon, genvejstaster og
 // "løkken" der hvert sekund tjekker, om brugeren holder pause i et spil.
 
+const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const {
@@ -27,12 +28,20 @@ const { createUpdater, describeUpdate } = require('./updater');
 const { LEVELS, EQUIPMENT, FREQUENCIES, MUSCLE_GROUPS, FOCUS_AREAS, MAX_SETS_PER_DAY } = require('../core/catalog');
 const { EXERCISES } = require('../core/exercises');
 const engine = require('../core/workout-engine');
-const { KNOWN_GAMES, customGamesToDefinitions, detectGame, selectableProcesses } = require('../core/games');
+const {
+  KNOWN_GAMES,
+  customGamesToDefinitions,
+  autoGamesToDefinitions,
+  detectGame,
+  selectableProcesses,
+  normalizeProcessName,
+} = require('../core/games');
+const { GameFinder, isGameFocused } = require('../core/game-detection');
 const { INTEGRATIONS, parseGsiPayload } = require('../core/gsi');
 const { normalizeSettings } = require('../core/settings');
 const { PauseDetector } = require('../core/pause-detector');
 const { Coach } = require('../core/coach');
-const { todaySummary, describeToday } = require('../core/stats');
+const { todaySummary, describeToday, setsByDay, streakDays } = require('../core/stats');
 const { GamepadActivity } = require('../core/gamepad-activity');
 const windowsNative = require('./windows-native');
 
@@ -46,6 +55,8 @@ const TICK_MS = 1000;
 const PROCESS_SCAN_MS = 5000;
 const GSI_STALE_MS = 30 * 1000; // spillet sender et "heartbeat" hvert 10. sekund
 const SNOOZE_MINUTES = 10;
+const BACKGROUND_SECONDS = 15; // så længe skal spillet være i baggrunden, før det er en pause
+const UPDATE_INSTALL_AFTER_MS = 2 * 60 * 1000; // ingen spil i 2 min. = tid til at opdatere
 const OVERLAY_WIDTH = 392;
 const OVERLAY_MARGIN = 12;
 
@@ -66,6 +77,7 @@ const EDITABLE_KEYS = [
   'setsPerDay',
   'minMinutesBetween',
   'useIdleDetection',
+  'useFocusDetection',
   'idleSeconds',
   'customGames',
   'overlayPosition',
@@ -95,10 +107,23 @@ let detected = null; // { game, phase }
 let scanning = false;
 let lastScanAt = 0;
 let lastPause = { state: 'noGame', source: 'none', reason: 'Intet spil kører', game: null };
+let lastIdleSeconds = 0;
 let hotkeyStatus = {};
 let trayKey = '';
 let updater = null;
 let notifiedUpdateVersion = null;
+let noGameSince = Date.now(); // til automatisk installation af opdateringer
+let topmostTimer = null;
+
+// Det vi ved om spillets vindue (kun Windows).
+const focus = {
+  foreground: null, // seneste forgrundsvindue (ikke vores eget)
+  gameFocused: null, // true/false/null
+  backgroundSince: null, // hvornår spillet sidst mistede fokus
+  gameMonitor: null, // skærmen spillet sidst blev vist på (fysiske pixels)
+  gameFullscreen: false, // fylder spillet hele skærmen?
+};
+const gameFinder = new GameFinder();
 
 const pauseDetector = new PauseDetector();
 const gamepads = new GamepadActivity();
@@ -119,7 +144,49 @@ const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => obj && k in ob
 // --- Spil og pauser -----------------------------------------------------------
 
 function allGames() {
-  return [...customGamesToDefinitions(settings.customGames), ...KNOWN_GAMES];
+  return [
+    ...customGamesToDefinitions(settings.customGames),
+    ...autoGamesToDefinitions(settings.autoGames),
+    ...KNOWN_GAMES,
+  ];
+}
+
+// Er programmet allerede kendt, tilføjet, foreslået eller afvist?
+function isKnownProcess(exe) {
+  const key = normalizeProcessName(exe);
+  const lists = [settings.customGames, settings.autoGames, settings.gameSuggestions];
+  return (
+    settings.ignoredGames.includes(key) ||
+    lists.some((list) => list.some((g) => normalizeProcessName(g.process) === key)) ||
+    KNOWN_GAMES.some((g) => g.processes.some((p) => normalizeProcessName(p) === key))
+  );
+}
+
+// Hvert sekund: hvilket program er i forgrunden? Bruges til at finde nye spil,
+// opdage alt-tab ud af spillet og placere overlayet på spillets skærm.
+function trackForeground(now) {
+  const fg = windowsNative.foregroundWindow();
+  // Vores eget overlay/vindue i forgrunden ændrer ikke på, hvad spillet gør.
+  if (!fg || fg.pid === process.pid) return;
+  focus.foreground = fg;
+
+  const found = gameFinder.update(fg, now, isKnownProcess);
+  if (found?.added) {
+    settings = store.saveSettings({ ...settings, autoGames: [...settings.autoGames, found.added] });
+    scanProcesses();
+  } else if (found?.suggested) {
+    settings = store.saveSettings({ ...settings, gameSuggestions: [...settings.gameSuggestions, found.suggested] });
+  }
+
+  const focused = isGameFocused(detected?.game, fg);
+  if (focused === true) {
+    focus.backgroundSince = null;
+    focus.gameMonitor = fg.monitor;
+    focus.gameFullscreen = fg.coversMonitor;
+  } else if (focused === false && focus.gameFocused !== false) {
+    focus.backgroundSince = now;
+  }
+  focus.gameFocused = focused;
 }
 
 async function scanProcesses() {
@@ -143,9 +210,13 @@ function tick() {
   const now = Date.now();
   if (now - lastScanAt >= PROCESS_SCAN_MS) scanProcesses();
 
+  trackForeground(now);
+
   // Windows tæller ikke controller-input som aktivitet, så vi bruger det korteste af de to.
   const idleSeconds = Math.min(powerMonitor.getSystemIdleTime(), gamepads.idleSeconds(now));
   const game = detected?.game ?? null;
+  const backgroundSeconds =
+    game && focus.gameFocused === false && focus.backgroundSince != null ? (now - focus.backgroundSince) / 1000 : null;
   lastPause = pauseDetector.update({
     now,
     game,
@@ -154,10 +225,22 @@ function tick() {
     idleSeconds,
     useIdle: settings.useIdleDetection,
     idleThreshold: settings.idleSeconds,
+    backgroundSeconds: settings.useFocusDetection ? backgroundSeconds : null,
+    backgroundThreshold: BACKGROUND_SECONDS,
   });
+  lastIdleSeconds = idleSeconds;
 
   runCommands(coach.tick({ now, pause: lastPause, idleSeconds, settings }));
+  maybeInstallUpdate(now);
   refreshTray();
+}
+
+// En hentet opdatering installeres automatisk, når der ikke har kørt et spil i
+// et par minutter, og der ikke vises en øvelse. Appen genstarter stille.
+function maybeInstallUpdate(now) {
+  if (lastPause.state !== 'noGame') noGameSince = now;
+  if (updater.status().state !== 'ready' || coach.current) return;
+  if (now - noGameSince >= UPDATE_INSTALL_AFTER_MS) updater.install();
 }
 
 // Aflæser Xbox-kompatible controllere flere gange i sekundet (kun Windows).
@@ -244,9 +327,23 @@ function overlayCorner() {
   return c?.trigger === 'preview' && c.settingsOverride ? c.settingsOverride.overlayPosition : settings.overlayPosition;
 }
 
+// Skærmen spillet kører på – ellers hovedskærmen.
+function overlayDisplay() {
+  const monitor = focus.gameMonitor;
+  if (!monitor) return screen.getPrimaryDisplay();
+  const physical = {
+    x: monitor.left,
+    y: monitor.top,
+    width: monitor.right - monitor.left,
+    height: monitor.bottom - monitor.top,
+  };
+  const dip = process.platform === 'win32' ? screen.screenToDipRect(null, physical) : physical;
+  return screen.getDisplayMatching(dip);
+}
+
 function positionOverlay() {
   if (!overlayWindow) return;
-  const area = screen.getPrimaryDisplay().workArea;
+  const area = overlayDisplay().workArea;
   const height = Math.min(Math.round(overlayHeight), area.height - OVERLAY_MARGIN * 2);
   const corner = overlayCorner();
   const x = corner.endsWith('right') ? area.x + area.width - OVERLAY_WIDTH - OVERLAY_MARGIN : area.x + OVERLAY_MARGIN;
@@ -267,11 +364,24 @@ function revealOverlay() {
   if (!overlayWindow || !coach.current) return;
   positionOverlay();
   if (!overlayWindow.isVisible()) overlayWindow.showInactive(); // stjæl ikke fokus fra spillet
+  keepOnTop();
+  // Mange spil lægger sig selv "altid øverst" igen og igen. Så længe overlayet
+  // vises, lægger vi det øverst igen hvert halve sekund.
+  clearInterval(topmostTimer);
+  topmostTimer = setInterval(keepOnTop, 500);
+}
+
+function keepOnTop() {
+  if (!overlayWindow?.isVisible()) return;
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  overlayWindow.moveTop();
+  windowsNative.bringToTop(overlayWindow.getNativeWindowHandle());
 }
 
 function hideOverlay() {
   overlayShowPending = false;
+  clearInterval(topmostTimer);
+  topmostTimer = null;
   sendOverlay('overlay:clear');
   overlayWindow?.hide();
 }
@@ -296,13 +406,21 @@ function setProgressText(exercise, activeSettings) {
   return group.done < group.target ? `sæt ${group.done + 1} af ${group.target} i dag` : 'ekstra sæt';
 }
 
-// Læs øvelsen højt, hvis brugeren vil – eller hvis spillet kører i eksklusiv fuldskærm,
-// hvor overlayet ikke kan ses.
+// 'exclusive' (overlayet kan ikke ses), 'borderless' (spillet fylder skærmen) eller null.
+function fullscreenState() {
+  if (windowsNative.notificationState() === 'exclusive') return 'exclusive';
+  if (focus.gameFocused && focus.gameFullscreen) return 'borderless';
+  return null;
+}
+
+// Læs øvelsen højt, hvis brugeren vil – eller hvis spillet kører i fuld skærm.
+// I eksklusiv fuldskærm kan overlayet slet ikke ses, og i kantløs fuldskærm kan et
+// spil i sjældne tilfælde ligge ovenpå, så oplæsningen er en sikkerhed.
 function shouldSpeak(current) {
   const mode = (current.settingsOverride || settings).speak;
   if (mode === 'always') return true;
   if (mode === 'never' || current.trigger === 'preview') return false;
-  return windowsNative.isExclusiveFullscreen() === true;
+  return fullscreenState() != null;
 }
 
 function todayText(now) {
@@ -379,6 +497,105 @@ function endOfToday(now) {
   const d = new Date(now);
   d.setHours(23, 59, 59, 999);
   return d.getTime();
+}
+
+// --- Oversigt -----------------------------------------------------------------------
+
+const PAUSE_SIGNALS = {
+  integration: (game) => `${game} fortæller selv, når kampen slutter`,
+  process: () => 'Lobby og kamp skelnes på spillets programmer',
+  focus: () => 'Du har alt-tabbet ud af spillet',
+  idle: () => `Ingen aktivitet i ${settings.idleSeconds} sek. = pause`,
+  none: () => 'Kun genvejstasten (inaktivitet er slået fra)',
+};
+
+function nextExerciseText(now) {
+  const next = coach.nextAllowedAt(settings);
+  return next > now
+    ? `Næste øvelse tidligst om ${Math.ceil((next - now) / 60000)} min.`
+    : 'Næste øvelse kommer i næste pause.';
+}
+
+// Alt hvad oversigten viser: status, hvad Workoutslop registrerer, dagens sæt og ugen.
+function overviewStatus() {
+  const now = Date.now();
+  const plan = engine.dailyPlan(EXERCISES, settings, store.history, now);
+  const game = lastPause.game;
+  const definition = detected?.game;
+  const snoozed = coach.snoozedUntil > now;
+  const caps = windowsNative.capabilities();
+
+  let title;
+  let subtitle;
+  let tone;
+  if (snoozed) {
+    [title, subtitle, tone] = ['Motion er sat på pause', `Til kl. ${formatClock(coach.snoozedUntil)}`, 'paused'];
+  } else if (plan.complete) {
+    [title, subtitle, tone] = ['Dagens sæt er klaret', 'Godt gået! Workoutslop holder fri til i morgen.', 'done'];
+  } else if (lastPause.state === 'noGame' || !game) {
+    [title, subtitle, tone] = ['Venter på et spil', 'Start et spil – Workoutslop finder det selv.', 'idle'];
+  } else if (lastPause.state === 'pause') {
+    const sub = coach.current ? 'Der vises en øvelse lige nu.' : nextExerciseText(now);
+    [title, subtitle, tone] = [`Pause i ${game.name}`, `${lastPause.reason}. ${sub}`, 'pause'];
+  } else {
+    [title, subtitle, tone] = [`Du spiller ${game.name}`, nextExerciseText(now), 'playing'];
+  }
+
+  const signals = [];
+  const kind = definition?.custom ? 'tilføjet af dig' : definition?.auto ? 'fundet automatisk' : 'kendt spil';
+  signals.push({ label: 'Spil', value: game ? `${game.name} (${kind})` : 'Intet spil kører' });
+  if (game) {
+    const source = lastPause.source in PAUSE_SIGNALS ? lastPause.source : 'idle';
+    signals.push({ label: 'Pauser findes ved', value: PAUSE_SIGNALS[source](game.name) });
+  }
+  let warning = null;
+  if (game && caps.foregroundWindow && focus.gameFocused != null) {
+    const fullscreen = fullscreenState();
+    let value = 'I baggrunden';
+    if (focus.gameFocused) {
+      value = 'I forgrunden · i et vindue';
+      if (fullscreen === 'exclusive') value = 'I forgrunden · eksklusiv fuldskærm';
+      else if (fullscreen === 'borderless') value = 'I forgrunden · fylder skærmen';
+    }
+    signals.push({ label: 'Spillets vindue', value, warn: fullscreen === 'exclusive' });
+    if (fullscreen === 'exclusive') {
+      warning =
+        'Spillet kører i eksklusiv fuldskærm, så overlayet kan ikke ses ovenpå – øvelsen læses højt i stedet. ' +
+        'Vælg "kantløst vindue" eller "fuldskærm i vindue" i spillets grafikindstillinger for at se overlayet.';
+    }
+  }
+  const idle = Math.round(lastIdleSeconds);
+  signals.push({ label: 'Sidste input', value: idle <= 1 ? 'Lige nu' : `${idle} sek. siden` });
+  if (caps.gamepads) {
+    signals.push({
+      label: 'Controller',
+      value: gamepads.connected ? `${gamepads.connected} tilsluttet` : 'Ingen tilsluttet',
+    });
+  }
+
+  return {
+    title,
+    subtitle,
+    tone,
+    snoozed,
+    signals,
+    warning,
+    today: {
+      done: plan.done,
+      target: plan.target,
+      groups: Object.keys(MUSCLE_GROUPS)
+        .filter((group) => plan.perGroup[group])
+        .map((group) => [group, plan.perGroup[group]])
+        .map(([group, g]) => ({
+          name: MUSCLE_GROUPS[group],
+          done: Math.min(g.done, g.target),
+          target: g.target,
+        })),
+    },
+    week: setsByDay(store.history, now, 7),
+    streak: streakDays(store.history, now),
+    hotkeyNow: hotkeyLabel('now'),
+  };
 }
 
 function statusText(now) {
@@ -602,6 +819,7 @@ function setupData() {
     },
     integrations: integrationStatuses(),
     native: windowsNative.capabilities(),
+    games: { autoGames: settings.autoGames, gameSuggestions: settings.gameSuggestions },
     gsiError,
     hotkeys: Object.keys(HOTKEYS).map((id) => ({
       id,
@@ -739,12 +957,43 @@ function registerIpc() {
         icon: APP_ICON,
       }).show();
     }
-    setupWindow?.close();
     return { ok: true };
   });
 
   ipcMain.on('setup:close', (event) => fromSetup(event) && setupWindow?.close());
   ipcMain.on('updates:check', (event) => fromSetup(event) && updater.check());
+
+  // Oversigten
+  ipcMain.handle('app:status', (event) => (fromSetup(event) ? overviewStatus() : null));
+  ipcMain.on('app:exercise-now', (event) => fromSetup(event) && runCommands(coach.requestNow(Date.now())));
+  ipcMain.on('app:pause', (event, minutes) => {
+    if (fromSetup(event) && Number.isFinite(minutes)) pauseExercises(Date.now() + minutes * 60000);
+  });
+  ipcMain.on('app:resume', (event) => {
+    if (!fromSetup(event)) return;
+    coach.resume();
+    refreshTray(true);
+  });
+
+  // Fundne og foreslåede spil: tilføj, afvis eller fjern.
+  ipcMain.handle('games:update', (event, { action, process: processName } = {}) => {
+    if (!fromSetup(event)) return null;
+    const key = normalizeProcessName(processName || '');
+    const same = (g) => normalizeProcessName(g.process) === key;
+    const suggestion = settings.gameSuggestions.find(same);
+    let next = { ...settings };
+    if (action === 'accept' && suggestion) {
+      next.autoGames = [...settings.autoGames, suggestion];
+      next.gameSuggestions = settings.gameSuggestions.filter((g) => !same(g));
+    } else if (action === 'ignore' || action === 'remove') {
+      next.autoGames = settings.autoGames.filter((g) => !same(g));
+      next.gameSuggestions = settings.gameSuggestions.filter((g) => !same(g));
+      next.ignoredGames = [...settings.ignoredGames, key];
+    }
+    settings = store.saveSettings(next);
+    scanProcesses();
+    return { autoGames: settings.autoGames, gameSuggestions: settings.gameSuggestions };
+  });
   ipcMain.on('updates:install', (event) => fromSetup(event) && updater.install());
 
   ipcMain.on('overlay:size', (event, height) => {
@@ -768,6 +1017,27 @@ function lockDownNavigation(win) {
 
 // --- Opstart ----------------------------------------------------------------------
 
+// En lille fil fortæller den nye version, at den blev startet af en opdatering.
+const updateMarkerPath = () => path.join(app.getPath('userData'), 'just-updated.json');
+
+function markUpdating(version) {
+  try {
+    fs.writeFileSync(updateMarkerPath(), JSON.stringify({ version, at: Date.now() }));
+  } catch {
+    // Ikke vigtigt nok til at stoppe opdateringen.
+  }
+}
+
+function readUpdateMarker() {
+  try {
+    const marker = JSON.parse(fs.readFileSync(updateMarkerPath(), 'utf8'));
+    fs.unlinkSync(updateMarkerPath());
+    return Date.now() - marker.at < 15 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}
+
 function start() {
   if (process.platform === 'win32') app.setAppUserModelId('dk.workoutslop.app');
 
@@ -776,7 +1046,8 @@ function start() {
   if (!settings.gsiToken)
     settings = store.saveSettings({ ...settings, gsiToken: crypto.randomBytes(16).toString('hex') });
   coach.lastCompletedAt = engine.lastCompletedAt(store.history);
-  updater = createUpdater({ onChange: onUpdateStatus });
+  updater = createUpdater({ onChange: onUpdateStatus, beforeInstall: markUpdating });
+  const justUpdated = readUpdateMarker();
 
   registerIpc();
   createOverlayWindow();
@@ -785,14 +1056,24 @@ function start() {
   startGsi();
   applyLoginItem();
   updater.start();
+  // Efter dvale: tjek for opdateringer med det samme.
+  powerMonitor.on('resume', () => updater.check());
   scanProcesses();
   startGamepadPolling();
   setInterval(tick, TICK_MS);
 
   // Starter man selv appen (fx fra startmenuen), vises vinduet, så man kan se, at den kører.
   // Ved automatisk start sammen med computeren kører den bare stille i baggrunden.
+  // Efter en automatisk opdatering starter appen også stille.
   const startedAtLogin = process.argv.includes('--hidden') || app.getLoginItemSettings().wasOpenedAtLogin;
-  if (!settings.setupComplete || !startedAtLogin) openSetup();
+  if (!settings.setupComplete || !(startedAtLogin || justUpdated)) openSetup();
+  if (justUpdated && Notification.isSupported()) {
+    new Notification({
+      title: `Workoutslop er opdateret til ${app.getVersion()}`,
+      body: 'Den nye version kører allerede i baggrunden.',
+      icon: APP_ICON,
+    }).show();
+  }
 }
 
 if (!app.requestSingleInstanceLock()) {

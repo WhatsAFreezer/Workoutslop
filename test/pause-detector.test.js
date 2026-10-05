@@ -65,3 +65,11 @@ test('et kort udsving i et præcist signal ignoreres', () => {
   assert.equal(d.update({ ...base, now: 5500, integration: over }).state, 'playing');
   assert.equal(d.update({ ...base, now: 7600, integration: over }).state, 'pause');
 });
+
+test('spillet i baggrunden (alt-tab) giver pause', () => {
+  assert.equal(evaluate({ ...base, backgroundSeconds: 5, backgroundThreshold: 15 }).state, 'playing');
+  const r = evaluate({ ...base, backgroundSeconds: 20, backgroundThreshold: 15 });
+  assert.deepEqual(r, { state: 'pause', source: 'focus', reason: 'Spillet er i baggrunden' });
+  // Spillets egne signaler vinder: er man i kamp, er det ikke en pause.
+  assert.equal(evaluate({ ...base, phase: 'match', backgroundSeconds: 99, backgroundThreshold: 15 }).state, 'playing');
+});

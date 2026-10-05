@@ -854,3 +854,248 @@ button:focus-visible {
 .speak-test .hint {
   margin: 0;
 }
+
+/* Oversigt ----------------------------------------------------------------- */
+.nav-overview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 10px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.nav-overview:hover {
+  background: var(--panel-2);
+}
+.nav-overview[aria-current='page'] {
+  background: var(--panel-3);
+}
+.nav-overview .num {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  color: var(--muted);
+}
+.nav-overview[aria-current='page'] .num {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.nav-overview svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.nav-overview b {
+  display: block;
+  font-size: 14px;
+}
+.nav-overview small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.nav-heading {
+  margin: 0 10px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.ov-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.tone-dot {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 11px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+.tone-dot[data-tone='playing'],
+.tone-dot[data-tone='done'] {
+  background: var(--accent);
+}
+.tone-dot[data-tone='pause'] {
+  background: var(--warn);
+}
+.ov-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: -8px 0 20px;
+}
+.ov-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+.panel {
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+.ov-wide {
+  grid-column: 1 / -1;
+}
+.signals {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 14px;
+  margin: 12px 0 0;
+  font-size: 13.5px;
+}
+.signals dt {
+  color: var(--muted);
+}
+.signals dd {
+  margin: 0;
+}
+.signals dd.warn {
+  color: var(--warn);
+}
+.ov-hero {
+  margin: 4px 0 14px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.ov-hero b {
+  margin-right: 4px;
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--text);
+}
+.meters {
+  display: grid;
+  gap: 10px;
+}
+.meter {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px 10px;
+  font-size: 13px;
+}
+.meter-value {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.meter-track {
+  grid-column: 1 / -1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--chart-track);
+  overflow: hidden;
+}
+.meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--chart-fill);
+}
+.empty-note {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.ov-chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.streak {
+  font-size: 13px;
+  color: var(--muted);
+}
+.streak b {
+  color: var(--text);
+}
+.chart {
+  position: relative;
+  height: 190px;
+  margin-top: 12px;
+}
+.chart svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.chart .grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.chart .tick {
+  fill: var(--faint);
+  font-size: 11px;
+}
+.chart .day {
+  fill: var(--muted);
+  font-size: 12px;
+}
+.chart .day.today {
+  fill: var(--text);
+  font-weight: 700;
+}
+.chart .col {
+  fill: var(--chart-fill);
+}
+.chart .col.active {
+  fill: var(--chart-fill-hover);
+}
+.chart .value {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+.chart .hit {
+  fill: transparent;
+}
+.chart-tip {
+  position: absolute;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-3);
+  font-size: 12.5px;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 8px));
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.subheading {
+  margin-top: 18px;
+}
+.saved-note {
+  display: inline-block;
+  margin: 0 0 14px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 650;
+}

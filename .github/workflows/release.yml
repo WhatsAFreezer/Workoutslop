@@ -1,0 +1,75 @@
+# Udgiver en ny version med ét klik:
+#   GitHub → Actions → "Udgiv ny version" → Run workflow
+#
+# Versionsnummeret hæves (fx 0.1.0 → 0.1.1), appen testes og bygges på Windows, og
+# installationsprogrammet lægges op som en GitHub Release sammen med latest.yml.
+# Installerede apps finder den nye version og opdaterer sig selv.
+name: Udgiv ny version
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Hvor stor er ændringen? (patch = rettelser, minor = nye funktioner, major = store ændringer)'
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Hæv versionsnummeret
+        id: version
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          npm version ${{ inputs.bump }} -m "Version %s"
+          echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      # Først når alt er bygget, gemmes den nye version og tagget i repoet.
+      - name: Gem versionen i repoet
+        shell: bash
+        run: git push origin HEAD --follow-tags
+
+      - name: Udgiv
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Workoutslop ${{ steps.version.outputs.tag }}
+          make_latest: true
+          generate_release_notes: true
+          body: |
+            **Installér:** Hent `Workoutslop-Setup.exe` herunder og dobbeltklik på den. Workoutslop installeres og
+            starter af sig selv – der er ikke noget at vælge undervejs.
+
+            Har du allerede Workoutslop, opdaterer appen sig selv.
+          files: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/latest.yml

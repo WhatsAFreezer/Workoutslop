@@ -4,8 +4,10 @@
 //
 //  1. integration – spillet fortæller selv, om man er i en kamp (CS2, Dota 2).
 //  2. process     – spillet har separate processer for lobby og kamp (League).
-//  3. idle        – ingen mus/tastatur i et stykke tid, mens spillet kører
-//                   (kø, loadingskærm, mellem matches).
+//  3. focus       – spillet er i baggrunden (man har alt-tabbet ud, fx mens man
+//                   venter i kø). Kun Windows.
+//  4. idle        – ingen mus, tastatur eller controller i et stykke tid, mens
+//                   spillet kører (kø, loadingskærm, mellem matches).
 //
 // Kun 'integration' og 'process' er "præcise": de ved, hvornår en kamp starter.
 
@@ -15,13 +17,25 @@ function isPrecise(source) {
   return PRECISE_SOURCES.has(source);
 }
 
-function evaluate({ game, phase, integration, idleSeconds, useIdle, idleThreshold }) {
+function evaluate({
+  game,
+  phase,
+  integration,
+  idleSeconds,
+  useIdle,
+  idleThreshold,
+  backgroundSeconds = null,
+  backgroundThreshold = Infinity,
+}) {
   if (!game) return { state: 'noGame', source: 'none', reason: 'Intet spil kører' };
   if (integration) {
     return { state: integration.isBreak ? 'pause' : 'playing', source: 'integration', reason: integration.label };
   }
   if (phase === 'lobby') return { state: 'pause', source: 'process', reason: 'I lobbyen mellem kampe' };
   if (phase === 'match') return { state: 'playing', source: 'process', reason: 'I kamp' };
+  if (backgroundSeconds != null && backgroundSeconds >= backgroundThreshold) {
+    return { state: 'pause', source: 'focus', reason: 'Spillet er i baggrunden' };
+  }
   if (useIdle && idleSeconds >= idleThreshold) {
     return { state: 'pause', source: 'idle', reason: `Ingen aktivitet i ${Math.round(idleSeconds)} sek.` };
   }

@@ -25,6 +25,14 @@
         </div>
 
         <nav>
+          <button type="button" class="nav-overview" id="nav-overview" hidden>
+            <span class="num"
+              ><svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-5h-6v5H5a1 1 0 0 1-1-1z" /></svg
+            ></span>
+            <span><b>Oversigt</b><small>Status og statistik</small></span>
+          </button>
+          <p class="nav-heading" id="nav-heading" hidden>Indstillinger</p>
           <ol class="nav" id="nav">
             <li>
               <button type="button" data-step="0">
@@ -74,6 +82,42 @@
 
       <main class="content">
         <div class="scroll">
+          <!-- Oversigt (vises, når opsætningen er gemt) -->
+          <section class="step overview" data-step="overview" hidden>
+            <div class="ov-head">
+              <span class="tone-dot" id="ov-tone"></span>
+              <div>
+                <h1 id="ov-title"></h1>
+                <p class="lead" id="ov-subtitle"></p>
+              </div>
+            </div>
+            <p class="saved-note" id="ov-saved" hidden>✓ Indstillingerne er gemt.</p>
+            <div class="ov-actions">
+              <button type="button" class="btn primary" id="ov-now">Vis en øvelse nu</button>
+              <button type="button" class="btn" id="ov-pause">Sæt motion på pause i 1 time</button>
+            </div>
+            <p class="warning" id="ov-warning" hidden></p>
+            <div class="ov-grid">
+              <section class="panel">
+                <h2>Det registrerer Workoutslop lige nu</h2>
+                <dl class="signals" id="ov-signals"></dl>
+              </section>
+              <section class="panel">
+                <h2>Dagens sæt</h2>
+                <p class="ov-hero"><b id="ov-done">0</b> <span id="ov-target"></span></p>
+                <div class="meters" id="ov-meters"></div>
+              </section>
+              <section class="panel ov-wide">
+                <div class="ov-chart-head">
+                  <h2>Sæt pr. dag, de sidste 7 dage</h2>
+                  <span class="streak" id="ov-streak"></span>
+                </div>
+                <div class="chart" id="ov-chart"></div>
+                <table class="sr-only" id="ov-table"></table>
+              </section>
+            </div>
+          </section>
+
           <!-- Trin 1 -->
           <section class="step" data-step="0">
             <p class="eyebrow">Trin 1 af 6</p>
@@ -149,6 +193,16 @@
                 <input type="range" id="idle-seconds" min="10" max="90" step="5" />
                 <output id="idle-out" for="idle-seconds"></output>
               </div>
+              <div class="toggle-row" id="focus-row">
+                <div>
+                  <h2>Pause når du alt-tabber ud af spillet</h2>
+                  <p class="hint">
+                    Er spillet i baggrunden i mere end 15 sekunder – fx mens du venter i kø og kigger på noget andet –
+                    tæller det som en pause.
+                  </p>
+                </div>
+                <label class="switch"><input type="checkbox" id="focus-toggle" /><span></span></label>
+              </div>
             </div>
 
             <div class="field">
@@ -220,6 +274,20 @@
               <p class="hint">
                 <span class="chip-dot"></span> = kan skelne mellem lobby og kamp. De andre bruger inaktivitet.
               </p>
+            </div>
+
+            <div class="field" id="found-field">
+              <h2>Fundet automatisk</h2>
+              <p class="hint">
+                Spil fra Steam, Epic, Riot, Xbox, GOG, Ubisoft, EA og Rockstar findes af sig selv, første gang du
+                spiller dem.
+              </p>
+              <ul class="custom-list" id="auto-games"></ul>
+              <div id="suggestions-wrap" hidden>
+                <h2 class="subheading">Er det her spil?</h2>
+                <p class="hint">Disse programmer har kørt i fuld skærm.</p>
+                <ul class="custom-list" id="game-suggestions"></ul>
+              </div>
             </div>
 
             <div class="field">

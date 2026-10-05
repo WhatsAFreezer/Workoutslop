@@ -31,6 +31,7 @@
   let step = 0;
   let furthest = 0;
   let counts = null; // antal øvelser der passer, fra hovedprocessen
+  let view = 'step'; // 'overview' eller 'step'
 
   // Laver et element. Tekst sættes altid som tekst (ikke HTML), så brugerinput er sikkert.
   function el(tag, props = {}, children = []) {
@@ -366,6 +367,9 @@
     $('idle-seconds').value = draft.idleSeconds;
     $('idle-out').textContent = `${draft.idleSeconds} sek.`;
     $('idle-row').hidden = !draft.useIdleDetection;
+    $('focus-toggle').checked = draft.useFocusDetection;
+    // Kun på Windows kan Workoutslop se, om spillet er i forgrunden.
+    $('focus-row').hidden = !data.native.foregroundWindow;
   }
 
   function renderCorners() {
@@ -518,12 +522,210 @@
     button.onclick = () => (update.state === 'ready' ? api.installUpdate() : api.checkUpdates());
   }
 
+  // --- Fundne spil (trin 6) ---------------------------------------------------------
+
+  function gameRow(game, buttons) {
+    return el('li', {}, [el('span', {}, [game.name, ' ', el('small', { text: game.process })]), ...buttons]);
+  }
+
+  function renderFoundGames() {
+    $('found-field').hidden = !data.native.foregroundWindow;
+    const { autoGames, gameSuggestions } = data.games;
+    const act = async (action, game) => {
+      data.games = await api.updateGames(action, game.process);
+      renderFoundGames();
+    };
+    $('auto-games').replaceChildren(
+      ...(autoGames.length === 0
+        ? [el('li', { class: 'empty', text: 'Ingen endnu – start et spil, så dukker det op her.' })]
+        : autoGames.map((game) =>
+            gameRow(game, [
+              el('button', {
+                type: 'button',
+                class: 'btn small ghost',
+                text: 'Ikke et spil',
+                onclick: () => act('remove', game),
+              }),
+            ]),
+          )),
+    );
+    $('suggestions-wrap').hidden = gameSuggestions.length === 0;
+    $('game-suggestions').replaceChildren(
+      ...gameSuggestions.map((game) =>
+        gameRow(game, [
+          el('button', { type: 'button', class: 'btn small', text: 'Ja, tilføj', onclick: () => act('accept', game) }),
+          el('button', { type: 'button', class: 'btn small ghost', text: 'Nej', onclick: () => act('ignore', game) }),
+        ]),
+      ),
+    );
+  }
+
+  // --- Oversigt ------------------------------------------------------------------------
+
+  function showOverview() {
+    view = 'overview';
+    for (const section of document.querySelectorAll('.step')) section.hidden = section.dataset.step !== 'overview';
+    for (const button of $('nav').querySelectorAll('button')) {
+      button.removeAttribute('aria-current');
+      button.disabled = false;
+      button.classList.remove('done');
+    }
+    $('nav-overview').hidden = false;
+    $('nav-heading').hidden = false;
+    $('nav-overview').setAttribute('aria-current', 'page');
+    document.querySelector('.footer').hidden = true;
+    document.querySelector('.scroll').scrollTop = 0;
+    refreshOverview();
+  }
+
+  async function refreshOverview() {
+    const status = await api.status();
+    if (!status) return;
+    $('ov-tone').dataset.tone = status.tone;
+    $('ov-title').textContent = status.title;
+    $('ov-subtitle').textContent = status.subtitle;
+    $('ov-now').textContent = `Vis en øvelse nu (${status.hotkeyNow})`;
+    $('ov-pause').textContent = status.snoozed ? 'Genoptag motion' : 'Sæt motion på pause i 1 time';
+    $('ov-warning').hidden = !status.warning;
+    $('ov-warning').textContent = status.warning || '';
+
+    $('ov-signals').replaceChildren(
+      ...status.signals.flatMap((signal) => [
+        el('dt', { text: signal.label }),
+        el('dd', { class: signal.warn ? 'warn' : '', text: signal.value }),
+      ]),
+    );
+
+    const { today } = status;
+    $('ov-done').textContent = today.done;
+    $('ov-target').textContent = today.target ? `af ${today.target} sæt` : 'sæt';
+    $('ov-meters').replaceChildren(
+      ...(today.groups.length === 0
+        ? [el('p', { class: 'empty-note', text: 'Ingen muskelgrupper har sæt i dag – vælg dem under Øvelser.' })]
+        : today.groups.map((group) => {
+            const fill = el('div', { class: 'meter-fill' });
+            fill.style.width = `${group.target ? (group.done / group.target) * 100 : 0}%`;
+            const done = group.done >= group.target;
+            return el('div', { class: 'meter' }, [
+              el('span', { text: group.name }),
+              el('span', { class: 'meter-value', text: `${group.done}/${group.target}${done ? ' ✓' : ''}` }),
+              el('div', { class: 'meter-track' }, [fill]),
+            ]);
+          })),
+    );
+
+    $('ov-streak').replaceChildren(
+      ...(status.streak > 0
+        ? [el('b', { text: status.streak === 1 ? '1 dag' : `${status.streak} dage` }), ' i træk med motion']
+        : ['Ingen dage i træk endnu']),
+    );
+    renderWeekChart(status.week);
+  }
+
+  // Søjlediagram over sæt pr. dag. Én serie, så ingen forklaring – titlen siger det.
+  function renderWeekChart(week) {
+    const box = $('ov-chart');
+    const width = box.clientWidth || 600;
+    const height = box.clientHeight || 190;
+    const pad = { top: 22, right: 8, bottom: 26, left: 28 };
+    const plotW = width - pad.left - pad.right;
+    const plotH = height - pad.top - pad.bottom;
+
+    const maxSets = Math.max(...week.map((d) => d.sets), 1);
+    const stepSize = [1, 2, 5, 10, 20, 50].find((s) => maxSets / s <= 4) || 100;
+    const top = Math.ceil(maxSets / stepSize) * stepSize;
+    const y = (v) => pad.top + plotH - (v / top) * plotH;
+    const slot = plotW / week.length;
+    const barW = Math.min(24, slot * 0.5);
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const node = (tag, attrs, text) => {
+      const n = document.createElementNS(NS, tag);
+      for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+      if (text != null) n.textContent = text;
+      return n;
+    };
+    const svg = node('svg', {
+      viewBox: `0 0 ${width} ${height}`,
+      role: 'img',
+      'aria-label': 'Sæt pr. dag de sidste 7 dage',
+    });
+
+    for (let v = 0; v <= top; v += stepSize) {
+      svg.append(node('line', { class: 'grid', x1: pad.left, x2: width - pad.right, y1: y(v), y2: y(v) }));
+      svg.append(node('text', { class: 'tick', x: pad.left - 8, y: y(v) + 4, 'text-anchor': 'end' }, String(v)));
+    }
+
+    const tip = el('div', { class: 'chart-tip', hidden: '' });
+    const base = y(0);
+    week.forEach((day, i) => {
+      const cx = pad.left + slot * i + slot / 2;
+      const x = cx - barW / 2;
+      const h = base - y(day.sets);
+      const isToday = i === week.length - 1;
+      let col = null;
+      if (day.sets > 0) {
+        // Afrundet top (4 px), firkantet ved bunden.
+        const r = Math.min(4, h, barW / 2);
+        const t = base - h;
+        const d = `M${x},${base} V${t + r} A${r},${r} 0 0 1 ${x + r},${t} H${x + barW - r} A${r},${r} 0 0 1 ${x + barW},${t + r} V${base} Z`;
+        col = node('path', { class: 'col', d });
+        svg.append(col);
+      }
+      if (isToday) {
+        svg.append(node('text', { class: 'value', x: cx, y: base - h - 6, 'text-anchor': 'middle' }, String(day.sets)));
+      }
+      svg.append(
+        node(
+          'text',
+          { class: `day${isToday ? ' today' : ''}`, x: cx, y: height - 6, 'text-anchor': 'middle' },
+          day.label,
+        ),
+      );
+
+      // Stort, usynligt område til hover – hele søjlens plads.
+      const hit = node('rect', { class: 'hit', x: pad.left + slot * i, y: pad.top, width: slot, height: plotH });
+      const dateText = new Date(day.date).toLocaleDateString('da-DK', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'short',
+      });
+      hit.addEventListener('mouseenter', () => {
+        col?.classList.add('active');
+        tip.textContent = `${dateText}: ${day.sets} sæt`;
+        tip.style.left = `${cx}px`;
+        tip.style.top = `${base - h}px`;
+        tip.hidden = false;
+      });
+      hit.addEventListener('mouseleave', () => {
+        col?.classList.remove('active');
+        tip.hidden = true;
+      });
+      svg.append(hit);
+    });
+    box.replaceChildren(svg, tip);
+
+    // Tabel til skærmlæsere med de samme tal.
+    $('ov-table').replaceChildren(
+      el('caption', { text: 'Sæt pr. dag de sidste 7 dage' }),
+      ...week.map((day) =>
+        el('tr', {}, [
+          el('th', { scope: 'row', text: new Date(day.date).toLocaleDateString('da-DK') }),
+          el('td', { text: String(day.sets) }),
+        ]),
+      ),
+    );
+  }
+
   // --- Navigation ---------------------------------------------------------------------
 
   function goTo(next) {
+    view = 'step';
     step = Math.max(0, Math.min(STEP_COUNT - 1, next));
     furthest = Math.max(furthest, step);
-    for (const section of document.querySelectorAll('.step')) section.hidden = Number(section.dataset.step) !== step;
+    for (const section of document.querySelectorAll('.step')) section.hidden = section.dataset.step !== String(step);
+    $('nav-overview').removeAttribute('aria-current');
+    document.querySelector('.footer').hidden = false;
 
     for (const button of $('nav').querySelectorAll('button')) {
       const index = Number(button.dataset.step);
@@ -547,10 +749,17 @@
     $('save').disabled = true;
     setStatus('Gemmer…');
     const result = await api.save(draft);
+    $('save').disabled = false;
     if (!result || !result.ok) {
-      $('save').disabled = false;
       setStatus('Kunne ikke gemme. Prøv igen.');
+      return;
     }
+    data.firstRun = false;
+    showOverview();
+    const note = $('ov-saved');
+    note.hidden = false;
+    clearTimeout(note.timer);
+    note.timer = setTimeout(() => (note.hidden = true), 4000);
   }
 
   async function preview() {
@@ -569,6 +778,17 @@
     $('save').addEventListener('click', save);
     $('preview').addEventListener('click', preview);
 
+    $('nav-overview').addEventListener('click', showOverview);
+    $('ov-now').addEventListener('click', () => api.exerciseNow());
+    $('ov-pause').addEventListener('click', async () => {
+      const status = await api.status();
+      if (status.snoozed) api.resume();
+      else api.pauseFor(60);
+      setTimeout(refreshOverview, 200);
+    });
+    $('focus-toggle').addEventListener('change', (e) => {
+      draft.useFocusDetection = e.target.checked;
+    });
     $('idle-toggle').addEventListener('change', (e) => {
       draft.useIdleDetection = e.target.checked;
       renderIdle();
@@ -614,11 +834,15 @@
     renderIntegrations();
     renderKnownGames();
     renderCustomGames();
+    renderFoundGames();
     renderHotkeys();
     renderUpdate(data.update);
     api.onUpdateStatus(renderUpdate);
     bindEvents();
-    goTo(0);
+    if (data.firstRun) goTo(0);
+    else showOverview();
+    // Oversigten opdateres løbende, mens den vises.
+    setInterval(() => view === 'overview' && refreshOverview(), 2000);
   }
 
   init();

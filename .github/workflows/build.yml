@@ -69,6 +69,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          make_latest: true
           body: |
             **Installér:** Hent `Workoutslop-Setup.exe` herunder og dobbeltklik på den. Workoutslop installeres og
             starter af sig selv – der er ikke noget at vælge undervejs.

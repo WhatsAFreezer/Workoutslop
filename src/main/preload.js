@@ -23,6 +23,11 @@ contextBridge.exposeInMainWorld('workoutslop', {
     checkUpdates: () => ipcRenderer.send('updates:check'),
     installUpdate: () => ipcRenderer.send('updates:install'),
     onUpdateStatus: listen('updates:status'),
+    status: () => ipcRenderer.invoke('app:status'),
+    exerciseNow: () => ipcRenderer.send('app:exercise-now'),
+    pauseFor: (minutes) => ipcRenderer.send('app:pause', minutes),
+    resume: () => ipcRenderer.send('app:resume'),
+    updateGames: (action, processName) => ipcRenderer.invoke('games:update', { action, process: processName }),
   },
   overlay: {
     onShow: listen('overlay:show'),

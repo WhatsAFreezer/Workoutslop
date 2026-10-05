@@ -61,6 +61,11 @@ function customGamesToDefinitions(customGames) {
   return customGames.map((g, i) => ({ id: `custom-${i}`, name: g.name, processes: [g.process], custom: true }));
 }
 
+// Spil fundet automatisk (se game-detection.js).
+function autoGamesToDefinitions(autoGames) {
+  return autoGames.map((g, i) => ({ id: `auto-${i}`, name: g.name, processes: [g.process], auto: true }));
+}
+
 // Finder det spil der kører lige nu. Returnerer { game, phase } eller null.
 // phase er 'match' / 'lobby' for spil med matchProcesses, ellers null.
 function detectGame(processNames, games) {
@@ -156,6 +161,7 @@ module.exports = {
   normalizeProcessName,
   createProcessMatcher,
   customGamesToDefinitions,
+  autoGamesToDefinitions,
   detectGame,
   parseTasklistCsv,
   parsePsOutput,
