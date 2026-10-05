@@ -910,6 +910,8 @@ function registerIpc() {
               name: ex.name,
               amount: engine.describeAmount(ex, amount),
               enabled: !draftValues.disabledExercises.includes(ex.id),
+              animation: ex.animation,
+              steps: ex.steps,
             };
           }),
       }))

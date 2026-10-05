@@ -845,6 +845,54 @@ button:focus-visible {
   color: var(--muted);
 }
 
+/* Forhåndsvisning af en øvelse, når man holder musen over den. */
+.ex-preview {
+  position: fixed;
+  z-index: 50;
+  width: 280px;
+  padding: 10px 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+.ex-preview[hidden] {
+  display: none;
+}
+.ex-preview-figure {
+  display: block;
+  width: 100%;
+  height: 150px;
+  border-radius: 8px;
+  background: var(--fig-bg);
+}
+.ex-preview-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 10px 2px 0;
+  font-size: 14px;
+}
+.ex-preview-head small {
+  flex: none;
+  color: var(--accent);
+  font-weight: 600;
+}
+.ex-preview ol {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.ex-preview-hint {
+  margin: 8px 2px 0;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
 .speak-test {
   display: flex;
   align-items: center;

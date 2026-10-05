@@ -218,6 +218,107 @@
 
   const setsLabel = (n) => (n === 0 ? 'Trænes ikke' : n === 1 ? '1 sæt/dag' : `${n} sæt/dag`);
 
+  // Holder man musen over (eller tabber til) en øvelse, vises den som animation,
+  // så man kan se, hvad øvelsen går ud på.
+  const exercisePreview = (() => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'ex-preview-figure');
+    svg.setAttribute('aria-hidden', 'true');
+    const title = el('b');
+    const amount = el('small');
+    const steps = el('ol');
+    const hint = el('p', { class: 'ex-preview-hint' });
+    const card = el('div', { class: 'ex-preview', id: 'ex-preview', role: 'tooltip', hidden: '' }, [
+      svg,
+      el('div', { class: 'ex-preview-head' }, [title, amount]),
+      steps,
+      hint,
+    ]);
+    document.body.append(card);
+
+    let player = null;
+    let shownId = null;
+    let timer = null;
+    const exercises = new Map(); // id -> øvelse fra planen
+
+    function place(chip) {
+      const r = chip.getBoundingClientRect();
+      const gap = 8;
+      const width = card.offsetWidth;
+      const height = card.offsetHeight;
+      const left = Math.min(Math.max(8, r.left + r.width / 2 - width / 2), window.innerWidth - width - 8);
+      const below = r.bottom + gap + height <= window.innerHeight - 8;
+      card.style.left = `${left}px`;
+      card.style.top = `${below ? r.bottom + gap : Math.max(8, r.top - gap - height)}px`;
+    }
+
+    function show(chip) {
+      const ex = exercises.get(chip.dataset.id);
+      if (!ex) return;
+      clearTimeout(timer);
+      if (shownId !== ex.id) {
+        shownId = ex.id;
+        player?.stop();
+        const anim = window.ANIMATIONS[ex.animation];
+        player = anim ? window.Figure.play(svg, anim) : null;
+        title.textContent = ex.name;
+        amount.textContent = ex.amount;
+        steps.replaceChildren(...ex.steps.map((step) => el('li', { text: step })));
+      }
+      hint.textContent = ex.enabled ? 'Valgt · klik for at fravælge' : 'Ikke valgt · klik for at vælge';
+      card.hidden = false;
+      chip.setAttribute('aria-describedby', 'ex-preview');
+      place(chip);
+    }
+
+    function hide() {
+      clearTimeout(timer);
+      card.hidden = true;
+      player?.stop();
+      player = null;
+      shownId = null;
+    }
+
+    // Kort pause før den første visning, så kortet ikke blinker, når musen bare passerer.
+    function hover(chip) {
+      if (!card.hidden) show(chip);
+      else {
+        clearTimeout(timer);
+        timer = setTimeout(() => show(chip), 150);
+      }
+    }
+
+    const container = $('muscles');
+    container.addEventListener('mouseover', (event) => {
+      const chip = event.target.closest('.exercise-chip');
+      if (chip) hover(chip);
+      else hide();
+    });
+    container.addEventListener('mouseleave', hide);
+    container.addEventListener('focusin', (event) => {
+      const chip = event.target.closest('.exercise-chip');
+      if (chip) show(chip);
+    });
+    container.addEventListener('focusout', (event) => {
+      if (!container.contains(event.relatedTarget)) hide();
+    });
+    document.addEventListener('keydown', (event) => event.key === 'Escape' && hide());
+    window.addEventListener('blur', hide);
+
+    return {
+      // Kaldes, når listen tegnes igen: kortet følger med til den nye knap.
+      update(groups) {
+        exercises.clear();
+        for (const group of groups) for (const ex of group.exercises) exercises.set(ex.id, ex);
+        if (card.hidden || !shownId) return;
+        const chip = container.querySelector(`.exercise-chip[data-id="${CSS.escape(shownId)}"]`);
+        if (chip) show(chip);
+        else hide();
+      },
+      hide,
+    };
+  })();
+
   async function renderPlan() {
     const plan = await api.plan(draft);
     if (!plan) return;
@@ -267,8 +368,8 @@
           {
             type: 'button',
             class: 'exercise-chip',
+            'data-id': ex.id,
             'aria-pressed': String(ex.enabled),
-            title: ex.enabled ? 'Klik for at fravælge' : 'Klik for at vælge',
             onclick: () => {
               draft.disabledExercises = ex.enabled
                 ? [...draft.disabledExercises, ex.id]
@@ -290,6 +391,7 @@
     });
 
     $('muscles').replaceChildren(...cards);
+    exercisePreview.update(plan.groups);
     $('plan-summary').replaceChildren(
       ...(totalSets === 0
         ? [el('b', { class: 'warn', text: 'Ingen sæt valgt. ' }), 'Giv mindst én muskelgruppe nogle sæt.']
@@ -564,6 +666,7 @@
 
   function showOverview() {
     view = 'overview';
+    exercisePreview.hide();
     for (const section of document.querySelectorAll('.step')) section.hidden = section.dataset.step !== 'overview';
     for (const button of $('nav').querySelectorAll('button')) {
       button.removeAttribute('aria-current');
@@ -734,6 +837,7 @@
 
   function goTo(next) {
     view = 'step';
+    exercisePreview.hide();
     step = Math.max(0, Math.min(STEP_COUNT - 1, next));
     furthest = Math.max(furthest, step);
     for (const section of document.querySelectorAll('.step')) section.hidden = section.dataset.step !== String(step);
