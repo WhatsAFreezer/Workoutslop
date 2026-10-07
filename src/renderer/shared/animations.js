@@ -52,8 +52,6 @@
   const pushTop = { ...straightBody(PUSH_ANKLE, 22), arm: PUSH_HANDS, leg: { to: PUSH_ANKLE, bend: -1 } };
   const pushBottom = { ...straightBody(PUSH_ANKLE, 6), arm: PUSH_HANDS, leg: { to: PUSH_ANKLE, bend: -1 } };
   const INCLINE_ANKLE = [60, 141];
-  // Midt i hoppet mellem squat og armbøjningsposition (fødderne er i luften).
-  const BURPEE_HOP = { hip: [116, 104], torso: -10, arm: PUSH_HANDS, leg: { to: [88, 126], bend: -1 } };
   const KNEE = [80, 146];
 
   // Hængende i en stang (pull-ups m.m.).
@@ -95,16 +93,6 @@
     hip: [92, 112],
     torso: -55,
     arm: { to: [135, 104], bend: 1, hand },
-    leg: { a: 0, b: 90 },
-  });
-
-  // Siddende med armen strakt frem; den anden hånd trækker i fingrene.
-  const STRETCH_HAND = at([92, 66], -2, 52);
-  const wristStretchPose = (hand) => ({
-    hip: [92, 112],
-    torso: -90,
-    arm: { a: -2, b: -2, hand },
-    arm2: { to: at(STRETCH_HAND, hand, 8), bend: 1 },
     leg: { a: 0, b: 90 },
   });
 
@@ -177,24 +165,26 @@
     leg2: { a: -86, b: 4 },
   };
 
-  // Høje knæ: skiftevis det ene og det andet knæ op til hoftehøjde.
-  const highKnee = (front) => {
-    const up = { a: -8, b: 88 };
-    const down = { a: 92, b: 90 };
-    const forward = { a: 40, b: -50 };
-    const back = { a: 120, b: 70 };
-    return {
-      hip: [120, 76],
-      torso: -88,
-      arm: front ? back : forward,
-      arm2: front ? forward : back,
-      leg: front ? up : down,
-      leg2: front ? down : up,
-    };
-  };
-
   // Siddende på bænken med albuen mod låret (koncentrationscurl).
   const concentration = (b) => ({ hip: [92, 112], torso: -62, arm: { a: 72, b }, leg: { to: [132, F], bend: -1 } });
+
+  // Pike push-up med fødderne oppe på en bænk – næsten en håndstand.
+  const ELEVATED_ANKLE = [40, 110];
+  const elevatedPike = (hipAngle, torso, head) => ({
+    hip: { pivot: ELEVATED_ANKLE, angle: hipAngle, dist: 69 },
+    torso,
+    head,
+    arm: { to: [130, 145], bend: 1 },
+    leg: { to: ELEVATED_ANKLE, bend: -1, foot: 0 },
+  });
+
+  // Roning under et bord: kroppen er lige fra hælene, hænderne holder bordkanten.
+  const ROW_ANKLE = [10, 141];
+  const rowPose = (angle) => ({
+    ...straightBody(ROW_ANKLE, angle),
+    arm: { to: [110, 66], bend: 1 },
+    leg: { to: ROW_ANKLE, bend: -1, foot: -70 },
+  });
 
   const curlDown = { ...standing(), arm: { a: 94, b: 94 }, arm2: { a: 86, b: 86 } };
   const curlUp = { ...standing(), arm: { a: 94, b: -60 }, arm2: { a: 86, b: -66 } };
@@ -392,17 +382,6 @@
       hold: 60,
     },
 
-    mountainClimber: {
-      view: 'side',
-      props: [floor],
-      frames: [
-        { ...pushTop, leg: { to: [112, 132], bend: -1 }, leg2: { to: PUSH_ANKLE, bend: -1 } },
-        { ...pushTop, leg: { to: PUSH_ANKLE, bend: -1 }, leg2: { to: [112, 132], bend: -1 } },
-      ],
-      tempo: 320,
-      hold: 40,
-    },
-
     gluteBridge: {
       view: 'side',
       props: [floor],
@@ -473,31 +452,6 @@
       ],
       tempo: 700,
       holds: [150, 350],
-    },
-
-    burpee: {
-      view: 'side',
-      props: [floor],
-      frames: [
-        // Stå
-        { hip: [126, 76], torso: -90, arm: { to: [127, 82], bend: 1 }, leg: { to: [128, F], bend: -1 } },
-        // Squat med hænderne i gulvet
-        { hip: [112, 118], torso: -25, arm: PUSH_HANDS, leg: { to: [130, F], bend: -1, foot: 0 } },
-        // Hop fødderne bagud
-        BURPEE_HOP,
-        // Armbøjningsposition
-        { ...pushTop, leg: { to: PUSH_ANKLE, bend: -1 } },
-        // Hop fødderne frem igen
-        BURPEE_HOP,
-        // Tilbage i squat
-        { hip: [112, 118], torso: -25, arm: PUSH_HANDS, leg: { to: [130, F], bend: -1, foot: 0 } },
-        // Stå
-        { hip: [126, 76], torso: -90, arm: { to: [127, 82], bend: 1 }, leg: { to: [128, F], bend: -1 } },
-        // Hop med armene over hovedet
-        { hip: [126, 64], torso: -90, arm: { to: [131, -28], bend: 1 }, leg: { to: [128, 134], bend: -1 } },
-      ],
-      durations: [420, 220, 220, 220, 220, 420, 420, 420],
-      holds: [60, 60, 0, 120, 0, 60, 60, 60],
     },
 
     pullup: {
@@ -718,31 +672,6 @@
       holds: [300, 1400],
     },
 
-    wallAngel: {
-      view: 'front',
-      props: [floor],
-      frames: [
-        {
-          hip: [120, 76],
-          torso: -90,
-          arm: { a: 180, b: -90 },
-          arm2: { a: 0, b: -90 },
-          leg: { a: 95, b: 93 },
-          leg2: { a: 85, b: 87 },
-        },
-        {
-          hip: [120, 76],
-          torso: -90,
-          arm: { a: -118, b: -108 },
-          arm2: { a: -62, b: -72 },
-          leg: { a: 95, b: 93 },
-          leg2: { a: 85, b: 87 },
-        },
-      ],
-      tempo: 1400,
-      hold: 200,
-    },
-
     neckCurl: {
       view: 'side',
       props: [floor, { type: 'bench', x: 40, w: 98, top: 108 }, { type: 'dumbbell', on: 'hand0' }],
@@ -871,14 +800,6 @@
       tempo: 950,
     },
 
-    wristStretch: {
-      view: 'side',
-      props: [floor, { type: 'bench', x: 62, w: 50, top: 116 }],
-      frames: [wristStretchPose(-90), wristStretchPose(90)],
-      tempo: 700,
-      holds: [1600, 1600],
-    },
-
     wristCurl: {
       view: 'side',
       props: [
@@ -926,34 +847,12 @@
       holds: [150, 200],
     },
 
-    frontRaise: {
-      view: 'side',
-      props: [floor, { type: 'dumbbell', on: 'hand1', far: true }, { type: 'dumbbell', on: 'hand0' }],
-      frames: [
-        { ...standing(), arm: { a: 88, b: 86 }, arm2: { a: 90, b: 88 } },
-        { ...standing(), arm: { a: -4, b: -6 }, arm2: { a: -2, b: -4 } },
-      ],
-      tempo: 950,
-      holds: [150, 250],
-    },
-
     declinePushup: {
       view: 'side',
       props: [floor, { type: 'bench', x: 0, w: 60, top: 114 }],
       frames: [declinePose(7), declinePose(-8)],
       tempo: 950,
       hold: 150,
-    },
-
-    dumbbellPullover: {
-      view: 'side',
-      props: [floor, { type: 'bench', x: 72, w: 100, top: 108 }, { type: 'dumbbell', on: 'hand0' }],
-      frames: [
-        { ...onBench, arm: { a: -92, b: -86 } },
-        { ...onBench, arm: { a: 10, b: 16 } },
-      ],
-      tempo: 1200,
-      holds: [150, 200],
     },
 
     bandRow: {
@@ -976,31 +875,6 @@
       ],
       tempo: 900,
       holds: [150, 700],
-    },
-
-    wallChestStretch: {
-      view: 'side',
-      props: [floor, { type: 'wall', x: 84 }],
-      frames: [
-        {
-          hip: [116, 76],
-          torso: -90,
-          arm: { to: [86, 32], bend: -1 },
-          arm2: { a: 88, b: 88 },
-          leg: { to: [132, F], bend: -1 },
-          leg2: { to: [108, F], bend: -1 },
-        },
-        {
-          hip: [124, 78],
-          torso: -84,
-          arm: { to: [86, 32], bend: -1 },
-          arm2: { a: 86, b: 86 },
-          leg: { to: [146, F], bend: -1 },
-          leg2: { to: [108, F], bend: -1 },
-        },
-      ],
-      tempo: 1200,
-      holds: [600, 1800],
     },
 
     bandFacePull: {
@@ -1053,34 +927,6 @@
       frames: [rdlTop, rdlBottom],
       tempo: 1100,
       holds: [150, 250],
-    },
-
-    jumpSquat: {
-      view: 'side',
-      props: [floor],
-      frames: [
-        // Stå
-        { ...standing(), arm: { a: 100, b: 95 } },
-        // Squat med armene frem
-        {
-          hip: [98, 110],
-          torso: -48,
-          head: -70,
-          arm: { a: -8, b: -8 },
-          leg: { to: [122, F], bend: -1 },
-          leg2: { to: [118, F], bend: -1 },
-        },
-        // Hop med armene ned langs siden
-        {
-          hip: [120, 52],
-          torso: -90,
-          arm: { a: 105, b: 100 },
-          leg: { to: [121, 121], bend: -1, foot: 60 },
-          leg2: { to: [119, 121], bend: -1, foot: 60 },
-        },
-      ],
-      durations: [600, 280, 450],
-      holds: [100, 60, 0],
     },
 
     hipThrust: {
@@ -1149,14 +995,6 @@
       hold: 300,
     },
 
-    highKnees: {
-      view: 'side',
-      props: [floor],
-      frames: [highKnee(true), highKnee(false)],
-      tempo: 300,
-      hold: 40,
-    },
-
     supineNeckLift: {
       view: 'side',
       props: [floor],
@@ -1175,6 +1013,213 @@
       tempo: 950,
       holds: [150, 250],
     },
+
+    // --- Flere varianter og øvelser ------------------------------------------------
+
+    floorPress: {
+      view: 'side',
+      props: [floor, { type: 'dumbbell', on: 'hand0' }],
+      frames: [
+        { hip: [96, L], torso: 0, head: 0, arm: { a: 180, b: -88 }, leg: { to: [62, F], bend: 1, foot: 180 } },
+        { hip: [96, L], torso: 0, head: 0, arm: { a: -90, b: -90 }, leg: { to: [62, F], bend: 1, foot: 180 } },
+      ],
+      tempo: 900,
+      holds: [250, 150],
+    },
+
+    pausePushup: {
+      view: 'side',
+      props: [floor],
+      frames: [pushTop, pushBottom],
+      durations: [900, 600],
+      holds: [150, 1300],
+    },
+
+    elevatedPikePushup: {
+      view: 'side',
+      props: [floor, { type: 'bench', x: 0, w: 60, top: 114 }],
+      frames: [elevatedPike(-40, 36, 80), elevatedPike(-38, 70, 82)],
+      tempo: 1000,
+      holds: [150, 200],
+    },
+
+    invertedRow: {
+      view: 'side',
+      props: [floor, { type: 'bench', x: 104, w: 130, top: 60 }],
+      frames: [rowPose(10), rowPose(24)],
+      tempo: 900,
+      holds: [150, 300],
+    },
+
+    neckIsometric: {
+      view: 'side',
+      props: [floor],
+      frames: [
+        { ...standing(), arm: { to: [131, 16], bend: -1 } },
+        { ...standing(), head: -92, arm: { to: [131.5, 16], bend: -1 } },
+      ],
+      tempo: 1200,
+      hold: 800,
+    },
+
+    reverseLunge: {
+      view: 'side',
+      props: [floor],
+      frames: [
+        {
+          hip: [138, 76],
+          torso: -90,
+          arm: { a: 92, b: 90 },
+          leg: { to: [140, F], bend: -1, foot: 0 },
+          leg2: { to: [136, F], bend: -1, foot: 0 },
+        },
+        {
+          hip: [126, 106],
+          torso: -86,
+          arm: { a: 92, b: 90 },
+          leg: { to: [140, F], bend: -1, foot: 0 },
+          leg2: { to: [92, 140], bend: -1, foot: 70 },
+        },
+      ],
+      tempo: 1000,
+      holds: [150, 200],
+    },
+
+    singleLegGluteBridge: {
+      view: 'side',
+      props: [floor],
+      frames: [
+        {
+          hip: { pivot: [60, L], angle: 0, dist: 46 },
+          torso: 180,
+          head: 195,
+          arm: { a: 0, b: 0 },
+          leg: { to: [155, F], bend: -1, foot: 0 },
+          leg2: { a: -45, b: -45 },
+        },
+        {
+          hip: { pivot: [60, L], angle: -35, dist: 46 },
+          torso: 145,
+          head: 195,
+          arm: { a: 0, b: 0 },
+          leg: { to: [155, F], bend: -1, foot: 0 },
+          leg2: { a: -30, b: -30 },
+        },
+      ],
+      tempo: 1000,
+      holds: [150, 450],
+    },
+
+    singleLegCalfRaise: {
+      view: 'side',
+      props: [floor, { type: 'wall', x: 160 }],
+      frames: [
+        {
+          ...standing(),
+          arm: { to: [158, 54], bend: 1 },
+          leg: { to: [121, F], bend: -1, foot: 0 },
+          leg2: { a: 96, b: 150 },
+        },
+        {
+          ...standing(),
+          hip: [120, 68],
+          arm: { to: [158, 54], bend: 1 },
+          leg: { to: [121, 138], bend: -1, foot: 62 },
+          leg2: { a: 96, b: 150 },
+        },
+      ],
+      tempo: 700,
+      holds: [150, 400],
+    },
+
+    singleLegRDL: {
+      view: 'side',
+      props: [floor],
+      frames: [
+        { hip: [120, 76], torso: -90, arm: { a: 95, b: 92 }, leg: { to: [121, F], bend: -1 }, leg2: { a: 98, b: 125 } },
+        {
+          hip: [104, 80],
+          torso: -8,
+          head: -14,
+          arm: { a: 92, b: 92 },
+          leg: { to: [121, F], bend: -1 },
+          leg2: { a: 188, b: 188, foot: 95 },
+        },
+      ],
+      tempo: 1200,
+      holds: [150, 300],
+    },
+
+    hangingLegRaise: {
+      view: 'side',
+      props: [{ type: 'bar', at: [138, -18] }],
+      frames: [
+        {
+          hip: [128.6, 80],
+          torso: -92,
+          head: -98,
+          arm: { to: [138, -16], bend: 1 },
+          leg: { a: 93, b: 92 },
+          leg2: { a: 91, b: 90 },
+        },
+        {
+          hip: [128.6, 80],
+          torso: -98,
+          head: -98,
+          arm: { to: [138, -16], bend: 1 },
+          leg: { a: -4, b: -4, foot: -80 },
+          leg2: { a: -2, b: -2, foot: -80 },
+        },
+      ],
+      tempo: 1100,
+      holds: [200, 300],
+    },
+
+    reverseCrunch: {
+      view: 'side',
+      props: [floor],
+      frames: [
+        { ...supine, arm: { a: 0, b: 0 }, leg: { a: -90, b: 0 }, leg2: { a: -88, b: 2 } },
+        {
+          hip: [108, 138],
+          torso: 184,
+          head: 185,
+          arm: { a: 0, b: 0 },
+          leg: { a: -125, b: -30 },
+          leg2: { a: -122, b: -28 },
+        },
+      ],
+      tempo: 900,
+      holds: [150, 300],
+    },
+
+    hollowHold: {
+      view: 'side',
+      props: [floor],
+      frames: [
+        { hip: [106, 142], torso: 196, head: 200, arm: { a: 198, b: 198 }, leg: { a: -14, b: -14, foot: 0 } },
+        { hip: [106, 142], torso: 198, head: 202, arm: { a: 200, b: 200 }, leg: { a: -16, b: -16, foot: 0 } },
+      ],
+      tempo: 1600,
+      hold: 300,
+    },
+
+    proneCobra: {
+      view: 'side',
+      props: [floor],
+      frames: [
+        { hip: [100, L], torso: 0, head: 0, arm: { a: 180, b: 180 }, leg: { a: 180, b: 180, foot: 180 } },
+        { hip: [100, L], torso: -12, head: -12, arm: { a: 188, b: 188 }, leg: { a: 180, b: 180, foot: 180 } },
+      ],
+      tempo: 900,
+      holds: [150, 1500],
+    },
+  };
+
+  // Sideløft med elastik: samme bevægelse som med håndvægte, elastikken går fra fødderne.
+  ANIMATIONS.bandLateralRaise = {
+    ...ANIMATIONS.lateralRaise,
+    props: [floor, { type: 'band', from: 'ankle0', to: 'hand0' }, { type: 'band', from: 'ankle1', to: 'hand1' }],
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = ANIMATIONS;

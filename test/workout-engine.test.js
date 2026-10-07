@@ -33,7 +33,7 @@ test('udstyr: alle krav skal være opfyldt, lister betyder "én af dem"', () => 
 test('tilgængelige øvelser afhænger af niveau og udstyr', () => {
   const beginner = engine.availableExercises(EXERCISES, { level: 1, equipment: [] }).map((e) => e.id);
   assert.ok(beginner.includes('kneePushup'));
-  assert.ok(!beginner.includes('burpee'));
+  assert.ok(!beginner.includes('pikePushup'));
   assert.ok(!beginner.includes('bicepCurl'));
 
   const strong = engine.availableExercises(EXERCISES, { level: 4, equipment: ['pullupBar'] }).map((e) => e.id);
@@ -56,7 +56,7 @@ test('mængden rundes pænt', () => {
   const pullup = byId('pullup');
   assert.equal(engine.computeAmount(pullup, 2, 0).amount, 2); // 3 * 0.5 = 1.5 -> 2
   assert.equal(engine.computeAmount(byId('pushup'), 3, null).amount, 18);
-  assert.equal(engine.computeAmount(byId('burpee'), 1, null), null);
+  assert.equal(engine.computeAmount(byId('pikePushup'), 1, null), null);
 });
 
 test('vælger ikke den samme øvelse to gange i træk, når der er alternativer', () => {
@@ -191,7 +191,7 @@ test('fokus: kun øvelser fra fokusområdets egne muskelgrupper', () => {
 test('nakke, holdning, preacher curls og vægtstang', () => {
   const benchAndWeights = { level: 2, equipment: ['bench', 'dumbbells'], focus: ['backPosture'] };
   const ids = engine.availableExercises(EXERCISES, benchAndWeights).map((e) => e.id);
-  for (const id of ['neckCurl', 'neckExtension', 'proneYRaise', 'chestSupportedRow', 'chinTuck', 'wallAngel']) {
+  for (const id of ['neckCurl', 'neckExtension', 'proneYRaise', 'chestSupportedRow', 'chinTuck', 'floorYRaise']) {
     assert.ok(ids.includes(id), id);
   }
   assert.ok(!engine.hasEquipment(byId('neckCurl'), ['bench']));
@@ -208,14 +208,14 @@ test('arme inkluderer underarme', () => {
   const ids = engine
     .availableExercises(EXERCISES, { level: 2, equipment: ['dumbbells', 'barbell'], focus: ['arms'] })
     .map((e) => e.id);
-  for (const id of ['wristCurl', 'reverseWristCurl', 'hammerCurl', 'reverseCurl', 'farmersHold', 'wristStretch']) {
+  for (const id of ['wristCurl', 'reverseWristCurl', 'hammerCurl', 'reverseCurl', 'farmersHold']) {
     assert.ok(ids.includes(id), id);
   }
-  // Uden udstyr: håndledsstræk er altid muligt.
+  // Uden udstyr er der stadig noget til armene.
   const bodyweight = engine
     .availableExercises(EXERCISES, { level: 1, equipment: [], focus: ['arms'] })
     .map((e) => e.id);
-  assert.ok(bodyweight.includes('wristStretch'));
+  assert.ok(bodyweight.includes('diamondPushup'));
 });
 
 const MIN = 60 * 1000;
@@ -226,7 +226,7 @@ const doneEntry = (at, exerciseId) => {
 
 test('sæt pr. dag: dagens plan tæller gennemførte sæt pr. muskelgruppe', () => {
   const now = new Date(2026, 9, 4, 20, 0).getTime();
-  const settings = { level: 2, equipment: [], focus: ['legsAbs'], setsPerDay: { legs: 2, core: 1, cardio: 0 } };
+  const settings = { level: 2, equipment: [], focus: ['legsAbs'], setsPerDay: { legs: 2, core: 1 } };
   const yesterday = now - 24 * 60 * MIN;
   const history = [
     doneEntry(yesterday, 'squat'),
@@ -236,7 +236,6 @@ test('sæt pr. dag: dagens plan tæller gennemførte sæt pr. muskelgruppe', () 
   const plan = engine.dailyPlan(EXERCISES, settings, history, now);
   assert.deepEqual(plan.perGroup.legs, { done: 1, target: 2, remaining: 1 });
   assert.deepEqual(plan.perGroup.core, { done: 1, target: 1, remaining: 0 });
-  assert.equal(plan.perGroup.cardio, undefined); // 0 sæt = trænes ikke
   assert.equal(plan.target, 3);
   assert.equal(plan.done, 2);
   assert.equal(plan.complete, false);
@@ -250,7 +249,7 @@ test('sæt pr. dag: dagens plan tæller gennemførte sæt pr. muskelgruppe', () 
 
 test('sæt pr. dag: når målet er nået, er der fri – medmindre man selv beder om en øvelse', () => {
   const now = new Date(2026, 9, 4, 20, 0).getTime();
-  const settings = { level: 2, equipment: [], focus: ['legsAbs'], setsPerDay: { legs: 1, core: 1, cardio: 0 } };
+  const settings = { level: 2, equipment: [], focus: ['legsAbs'], setsPerDay: { legs: 1, core: 1 } };
   const history = [doneEntry(now - 30 * MIN, 'squat'), doneEntry(now - 5 * MIN, 'plank')];
   assert.equal(engine.dailyPlan(EXERCISES, settings, history, now).complete, true);
   assert.equal(engine.createSuggestion({ exercises: EXERCISES, settings, history, now }), null);
@@ -286,7 +285,7 @@ test('skuldre, ryg og triceps kan trænes uden vægte', () => {
   const groups = (equipment, level = 2) =>
     new Set(engine.availableExercises(EXERCISES, { level, equipment }).map((e) => e.muscleGroup));
   const bodyweight = groups([]);
-  for (const g of ['chest', 'shoulders', 'back', 'posture', 'neck', 'triceps', 'legs', 'core', 'cardio']) {
+  for (const g of ['chest', 'shoulders', 'back', 'posture', 'neck', 'triceps', 'legs', 'core']) {
     assert.ok(bodyweight.has(g), `uden udstyr: ${g}`);
   }
   const band = groups(['resistanceBand']);
@@ -377,7 +376,6 @@ test('egne dage: kombinerer muskelgrupper og kan bruges som fokus', () => {
   const groups = new Set(engine.availableExercises(EXERCISES, settings).map((e) => e.muscleGroup));
   assert.deepEqual([...groups].sort(), ['chest', 'shoulders', 'triceps']);
   assert.deepEqual([...engine.focusGroups(['day-push1', 'legsAbs'], s.customDays)].sort(), [
-    'cardio',
     'chest',
     'core',
     'legs',
@@ -388,4 +386,18 @@ test('egne dage: kombinerer muskelgrupper og kan bruges som fokus', () => {
   assert.deepEqual(engine.focusAreasOf(byId('diamondPushup'), s.customDays), ['arms', 'day-push1']);
   // Slettes dagen, forsvinder den også fra fokus.
   assert.deepEqual(normalizeSettings({ ...s, customDays: [] }).focus, ['arms']);
+});
+
+test('ingen kondition og ingen rene strækøvelser – kun øvelser, der træner en muskel', () => {
+  const { MUSCLE_GROUPS } = require('../src/core/catalog');
+  assert.equal(MUSCLE_GROUPS.cardio, undefined);
+  for (const ex of EXERCISES) assert.ok(ex.muscleGroup in MUSCLE_GROUPS, `${ex.id}: ${ex.muscleGroup}`);
+  for (const id of ['burpee', 'jumpingJack', 'wristStretch', 'wallChestStretch', 'wallAngel', 'frontRaise']) {
+    assert.equal(byId(id), undefined, id);
+  }
+  // Varianter findes på flere niveauer, fx armbøjninger og hoftehævninger.
+  for (const id of ['pausePushup', 'singleLegGluteBridge', 'reverseLunge', 'invertedRow', 'hangingLegRaise']) {
+    assert.ok(byId(id), id);
+  }
+  assert.equal(byId('deadHang').muscleGroup, 'forearms');
 });

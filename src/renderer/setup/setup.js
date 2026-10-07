@@ -29,14 +29,13 @@
     chest: ['pushup', 0],
     shoulders: ['shoulderPress', 1],
     back: ['pullup', 1],
-    posture: ['wallAngel', 1],
+    posture: ['bandPullApart', 1],
     neck: ['chinTuck', 1],
     biceps: ['bicepCurl', 1],
     triceps: ['benchDip', 1],
     forearms: ['wristCurl', 1],
     legs: ['squat', 1],
     core: ['plank', 0],
-    cardio: ['jumpingJack', 1],
   };
   const PLUS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
   const CHECK_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>';

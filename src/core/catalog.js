@@ -39,7 +39,6 @@ const MUSCLE_GROUPS = {
   forearms: 'Underarme & greb',
   legs: 'Ben & balder',
   core: 'Mave & core',
-  cardio: 'Kondition',
 };
 
 // Hvor mange sæt hver muskelgruppe som udgangspunkt skal have om dagen.
@@ -55,7 +54,6 @@ const DEFAULT_SETS_PER_DAY = {
   forearms: 2,
   legs: 4,
   core: 3,
-  cardio: 2,
 };
 const MAX_SETS_PER_DAY = 10;
 
@@ -77,8 +75,8 @@ const FOCUS_AREAS = [
   {
     id: 'legsAbs',
     name: 'Ben & mave',
-    description: 'Squats, udfald, planke, mavebøjninger og kondition.',
-    groups: ['legs', 'core', 'cardio'],
+    description: 'Squats, udfald, dødløft, planke og benløft.',
+    groups: ['legs', 'core'],
   },
   {
     id: 'arms',

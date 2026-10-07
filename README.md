@@ -166,7 +166,7 @@ at have et ikon i systembakken og at læse, hvor længe mus og tastatur har vær
 src/
   core/                    Logikken – ren JavaScript uden Electron, så den kan testes
     catalog.js             Styrkeniveauer, udstyr, fokusområder, muskelgrupper
-    exercises.js           Alle 71 øvelser med mængder, sværhedsgrad, trin og tips
+    exercises.js           Alle 76 øvelser med mængder, sværhedsgrad, trin og tips
     workout-engine.js      Vælger øvelse og udregner antal gentagelser
     games.js               Kendte spil og genkendelse af kørende programmer
     gsi.js                 CS2/Dota 2 Game State Integration
