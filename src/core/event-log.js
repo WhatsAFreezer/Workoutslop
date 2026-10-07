@@ -53,4 +53,4 @@ function formatReport({ title, sections, log }) {
   return lines.join('\n');
 }
 
-module.exports = { EventLog, formatTime, formatEntry, formatReport };
+module.exports = { EventLog, formatTime, formatReport };

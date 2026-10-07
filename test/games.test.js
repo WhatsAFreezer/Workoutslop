@@ -89,7 +89,6 @@ test('et spil, der fjernes fra listen, forsvinder med det samme', () => {
 
 test('parser tasklist og ps', () => {
   const csv = '"System Idle Process","0","Services","0","8 K"\r\n"cs2.exe","4242","Console","1","1.234.567 K"\r\n';
-  assert.deepEqual(games.parseTasklistCsv(csv), ['System Idle Process', 'cs2.exe']);
   assert.deepEqual(games.parseTasklistEntries(csv), [
     { name: 'System Idle Process', pid: 0 },
     { name: 'cs2.exe', pid: 4242 },

@@ -108,4 +108,4 @@ function describeUpdate(status) {
   }
 }
 
-module.exports = { createUpdater, describeUpdate, friendlyError };
+module.exports = { createUpdater, describeUpdate };

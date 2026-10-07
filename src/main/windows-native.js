@@ -133,12 +133,6 @@ function notificationState() {
   return 'normal';
 }
 
-// true/false – eller null, hvis det ikke kan afgøres (fx ikke Windows).
-function isExclusiveFullscreen() {
-  const state = notificationState();
-  return state == null ? null : state === 'exclusive';
-}
-
 function processPath(win, pid) {
   const handle = Number(win.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid));
   if (!handle) return null;
@@ -230,7 +224,6 @@ module.exports = {
   XUSER_MAX_COUNT,
   readGamepad,
   notificationState,
-  isExclusiveFullscreen,
   foregroundWindow,
   visibleWindowPids,
   bringToTop,

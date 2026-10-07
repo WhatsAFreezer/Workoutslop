@@ -5,7 +5,7 @@ pause i spillet, fx mellem to kampe, foreslår den en øvelse: armbøjninger, pu
 En animation viser, hvordan øvelsen laves. Antallet af gentagelser passer til dit styrkeniveau og til, hvor
 lang tid der er gået siden din sidste øvelse.
 
-<p align="center"><img src="docs/overlay.png" width="340" alt="Overlayet foreslår 22 armbøjninger i en pause i Counter-Strike 2"></p>
+<p align="center"><img src="docs/overlay.png" width="340" alt="Overlayet foreslår 23 armbøjninger i en pause i Counter-Strike 2"></p>
 
 ## Hent Workoutslop
 
@@ -24,20 +24,17 @@ Linket giver altid den nyeste version, og appen opdaterer sig selv bagefter.
    - **Styrke** – Begynder, Let øvet, Øvet eller Stærk.
    - **Udstyr** – håndvægte, kettlebell, træningsbænk, pull-up bar, elastikker og/eller vægtstang. Uden
      udstyr får du kropsvægtsøvelser.
-   - **Fokus** – hvad du vil træne: Bryst & skuldre, Ryg/nakke & holdning, Ben & mave, Arme – eller en
-     kombination, fx Bryst & skuldre + Arme. "Arme" dækker biceps, triceps og underarme/greb. Vælger du
-     intet, får du hele kroppen. Med **Lav din egen dag** giver du en dag et navn og vælger selv, hvilke
-     muskelgrupper den kombinerer – fx "Push" med bryst, skuldre og triceps. Dine dage kan vælges her og fra
-     ikonet i systembakken, og de kan redigeres og slettes igen.
-   - **Øvelser** – hvor mange sæt hver muskelgruppe skal have om dagen, og hvilke øvelser du vil have. Alle
-     muskelgrupper vises; dem i dit fokus er fremhævet øverst, og resten trænes ikke, før du vælger dem i
-     Fokus. Sættene fordeles over de øvelser, du har valgt. Hold musen over en øvelse for at se den som
-     animation, med sværhedsgrad og hvordan den laves.
+   - **Fokus** – hvad du vil træne: Bryst & skuldre, Ryg/nakke & holdning, Ben & mave eller Arme – gerne
+     flere på én gang. Med **Lav din egen dag** kombinerer du selv muskelgrupperne, fx "Push" med bryst,
+     skuldre og triceps. Vælger du intet, får du hele kroppen.
+   - **Øvelser** – sæt pr. dag for hver muskelgruppe, og hvilke øvelser du vil have. Grupperne i dit fokus er
+     fremhævet øverst. Hold musen over en øvelse for at se den som animation med sværhedsgrad.
    - **Pauser** – hvor ofte du vil træne, om inaktivitet skal tælle som pause, hvilket hjørne overlayet skal
      vises i, og om øvelsen skal læses højt.
    - **Spil** – de spil appen kender, dine egne spil og den præcise integration til CS2 og Dota 2.
 
-   <img src="docs/setup.png" width="640" alt="Opsætningen: valg af redskaber">
+   <img src="docs/overview.png" width="640" alt="Oversigten: status, dagens sæt og en graf over ugen">
+
    Når opsætningen er gemt, viser vinduet **Oversigten**: om du spiller eller holder pause, hvad Workoutslop
    registrerer lige nu (spil, vindue, input, controller), dagens sæt pr. muskelgruppe og en graf over de sidste
    7 dage. Det er også den side, du ser, når du åbner Workoutslop fra startmenuen.
@@ -176,7 +173,8 @@ src/
     gamepad-activity.js    Afgør om controller-input er rigtig aktivitet
     game-detection.js      Finder nye spil i spilbiblioteker og fuldskærmsprogrammer
     coach.js               Bestemmer hvornår overlayet vises, gøres lille eller skjules
-    settings.js, stats.js  Indstillinger og dagens statistik
+    settings.js, stats.js  Indstillinger (også dine egne dage) og statistik
+    event-log.js           Hændelsesloggen til fejlfinding
   main/                    Electron-hovedprocessen
     main.js                Vinduer, bakkeikon, genvejstaster og løkken der kører hvert sekund
     preload.js             Sikker bro mellem siderne og hovedprocessen
@@ -264,8 +262,6 @@ GitHub hæver versionsnummeret (fx 0.1.0 → 0.1.1), tester og bygger appen på 
 `Workoutslop-Setup.exe` op under **Releases** sammen med filen `latest.yml`. Det er den fil, de installerede
 apps bruger til at finde opdateringen – så udgiv altid nye versioner på den måde og ikke ved at oprette en
 release i hånden.
-
-(Fra en terminal kan du gøre det samme med `npm run release`.)
 
 > Appen henter opdateringer fra GitHub uden at logge ind, så repoet skal være **offentligt**.
 

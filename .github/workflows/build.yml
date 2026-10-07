@@ -1,14 +1,11 @@
-# Tester appen og bygger installationsprogrammet (Workoutslop-Setup-x.y.z.exe) på Windows.
-#
-# - Ved almindelige push: installationsprogrammet kan hentes under "Actions" -> kørslen -> "Artifacts".
-# - Ved et versions-tag (fx v0.2.0, lavet med `npm run release`): der oprettes en GitHub Release med
-#   installationsprogrammet og opdateringsfilerne, så installerede apps selv opdaterer sig.
+# Tester appen og bygger installationsprogrammet (Workoutslop-Setup.exe) på Windows ved hvert push.
+# Det kan hentes under "Actions" -> kørslen -> "Artifacts".
+# Nye versioner udgives med workflowet "Udgiv ny version" (release.yml).
 name: Byg Workoutslop
 
 on:
   push:
     branches: ['**']
-    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -29,24 +26,12 @@ jobs:
   windows:
     needs: test
     runs-on: windows-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
-      - name: Tjek at tagget passer med versionen i package.json
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          version="v$(node -p "require('./package.json').version")"
-          if [ "$version" != "${GITHUB_REF_NAME}" ]; then
-            echo "Tagget ${GITHUB_REF_NAME} passer ikke med package.json ($version)." >&2
-            exit 1
-          fi
 
       - run: npm ci
       # Kører også testene af Windows-funktionerne (controller og fuldskærm).
@@ -63,20 +48,3 @@ jobs:
             dist/*.blockmap
             dist/latest.yml
           if-no-files-found: error
-
-      # latest.yml og .blockmap er dem, appen bruger til at finde og hente opdateringer.
-      - name: Udgiv version
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          make_latest: true
-          body: |
-            **Installér:** Hent `Workoutslop-Setup.exe` herunder og dobbeltklik på den. Workoutslop installeres og
-            starter af sig selv – der er ikke noget at vælge undervejs.
-
-            Har du allerede Workoutslop, opdaterer appen sig selv.
-          generate_release_notes: true
-          files: |
-            dist/*.exe
-            dist/*.blockmap
-            dist/latest.yml

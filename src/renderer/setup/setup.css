@@ -655,11 +655,13 @@ code {
 .hotkeys {
   display: grid;
   grid-template-columns: auto 1fr;
+  align-items: center;
   gap: 8px 16px;
   margin: 12px 0 0;
   font-size: 14px;
 }
 .hotkeys dt kbd {
+  display: inline-block;
   padding: 3px 8px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -737,6 +739,7 @@ button:focus-visible {
 .muscle-list {
   display: grid;
   gap: 12px;
+  margin-top: 14px;
 }
 .muscle {
   padding: 14px 16px;
@@ -1237,12 +1240,12 @@ button:focus-visible {
 }
 .debug-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
   gap: 14px;
   margin-bottom: 14px;
 }
 .debug .signals {
-  grid-template-columns: minmax(110px, auto) 1fr;
+  grid-template-columns: 180px 1fr;
   font-size: 13px;
 }
 .debug .signals dd {
@@ -1375,7 +1378,6 @@ button:focus-visible {
 /* Fokus i trin 4 ---------------------------------------------------------------- */
 .muscle.in-focus {
   border-color: var(--accent);
-  box-shadow: inset 3px 0 0 var(--accent);
 }
 .muscle.out-of-focus {
   opacity: 0.62;

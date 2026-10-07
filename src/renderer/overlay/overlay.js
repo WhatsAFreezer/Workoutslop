@@ -44,7 +44,8 @@
     $('amount').textContent = next.amount;
     $('unit').textContent = next.unitLabel;
     $('set-progress').textContent = next.setText || '';
-    $('adjust').textContent = next.adjustText || '';
+    $('adjust').textContent = next.adjust.text;
+    $('adjust').title = next.adjust.title;
     $('easier').hidden = !next.canEase;
 
     const steps = $('steps');

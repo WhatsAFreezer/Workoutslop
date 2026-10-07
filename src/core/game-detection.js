@@ -300,4 +300,4 @@ function isGameFocused(game, foreground) {
   return game.processes.some((p) => normalizeProcessName(p) === exe);
 }
 
-module.exports = { LIBRARY_PATTERNS, gameFromPath, isNotGame, isKnownNonGame, GameFinder, isGameFocused };
+module.exports = { gameFromPath, isNotGame, isKnownNonGame, GameFinder, isGameFocused };

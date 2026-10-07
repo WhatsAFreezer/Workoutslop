@@ -145,10 +145,6 @@ function parseTasklistEntries(output) {
   return entries;
 }
 
-function parseTasklistCsv(output) {
-  return parseTasklistEntries(output).map((e) => e.name);
-}
-
 // macOS/Linux: `ps -A -o comm=` giver ét navn (eller en sti) pr. linje.
 function parsePsOutput(output) {
   return String(output)
@@ -219,13 +215,11 @@ function selectableProcesses(processNames) {
 module.exports = {
   KNOWN_GAMES,
   normalizeProcessName,
-  createProcessMatcher,
   customGamesToDefinitions,
   autoGamesToDefinitions,
   detectGame,
   GameDetector,
   parseTasklistEntries,
-  parseTasklistCsv,
   parsePsOutput,
   selectableProcesses,
 };

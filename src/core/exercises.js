@@ -27,7 +27,7 @@ const EXERCISES = [
       'Hold kroppen helt lige fra hoved til hæle.',
       'Sænk brystet mod gulvet og pres dig op igen.',
     ],
-    tip: 'For hårdt? Sæt knæene i gulvet.',
+    tip: 'Er det for hårdt, så sæt knæene i gulvet.',
   },
   {
     id: 'kneePushup',
@@ -230,7 +230,7 @@ const EXERCISES = [
       'Hold albuerne tæt ind til kroppen.',
       'Sænk brystet mod hænderne og pres op igen.',
     ],
-    tip: 'For hårdt? Lav dem med knæene i gulvet.',
+    tip: 'Er det for hårdt, så lav dem med knæene i gulvet.',
   },
   {
     id: 'chinTuck',
@@ -954,7 +954,7 @@ const EXERCISES = [
       'Løft hoften, så kroppen er lige fra hoved til fødder.',
       'Hold – tag halvdelen af tiden på hver side.',
     ],
-    tip: 'For hårdt? Sæt det nederste knæ i gulvet.',
+    tip: 'Er det for hårdt, så sæt det nederste knæ i gulvet.',
   },
   {
     id: 'jumpSquat',
@@ -1016,7 +1016,7 @@ const EXERCISES = [
       'Pres gennem hælene, og løft hoften, til kroppen er vandret fra knæ til skuldre.',
       'Klem ballerne i toppen, og sænk langsomt.',
     ],
-    tip: 'For let? Læg en håndvægt på hoften.',
+    tip: 'Er det for let, så læg en håndvægt på hoften.',
   },
   {
     id: 'frontRaise',

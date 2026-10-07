@@ -165,7 +165,7 @@
   function focusCountText(n) {
     if (n == null) return '';
     if (n === 0) return 'Ingen øvelser med dit udstyr';
-    return n === 1 ? '1 øvelse med dit udstyr' : `${n} øvelser med dit udstyr`;
+    return n === 1 ? '1 øvelse' : `${n} øvelser`;
   }
 
   function renderFocus() {
@@ -235,7 +235,7 @@
           [
             focusFigure(GROUP_FIGURES[day.groups[0]] || FOCUS_FIGURES.all),
             el('span', { class: 'choice-title', text: day.name }),
-            el('span', { class: 'choice-text', text: day.groups.map(groupName).join(', ') }),
+            el('span', { class: 'choice-text', text: day.groups.map(groupName).join(' + ') }),
             el('span', { class: n === 0 ? 'choice-example warn' : 'choice-example', text: focusCountText(n) }),
             el('span', { class: 'choice-mark', html: CHECK_ICON }),
           ],
@@ -256,7 +256,7 @@
             el('span', { class: 'choice-title', text: 'Lav din egen dag' }),
             el('span', {
               class: 'choice-text',
-              text: 'Kombinér de muskelgrupper, du vil træne – fx bryst, skuldre og triceps.',
+              text: 'Kombinér selv de muskelgrupper, du vil træne.',
             }),
           ])
         : null;

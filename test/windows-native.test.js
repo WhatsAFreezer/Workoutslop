@@ -12,7 +12,6 @@ test('uden for Windows slås funktionerne stille fra', { skip: process.platform 
     windowList: false,
   });
   assert.equal(native.readGamepad(0), null);
-  assert.equal(native.isExclusiveFullscreen(), null);
   assert.equal(native.notificationState(), null);
   assert.equal(native.foregroundWindow(), null);
   assert.equal(native.visibleWindowPids(), null);
@@ -33,7 +32,6 @@ test('Windows: controller, fuldskærm og forgrundsvindue kan aflæses', { skip: 
     assert.ok(state === null || typeof state.dwPacketNumber === 'number');
   }
   assert.ok(['exclusive', 'fullscreen', 'normal'].includes(native.notificationState()));
-  assert.equal(typeof native.isExclusiveFullscreen(), 'boolean');
 
   // En build-server har ikke nødvendigvis et vindue i forgrunden – men hvis den har, skal oplysningerne give mening.
   const fg = native.foregroundWindow();

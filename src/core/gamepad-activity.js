@@ -60,4 +60,4 @@ class GamepadActivity {
   }
 }
 
-module.exports = { GamepadActivity, isPressed, changedMeaningfully, STICK_DEADZONE };
+module.exports = { GamepadActivity };

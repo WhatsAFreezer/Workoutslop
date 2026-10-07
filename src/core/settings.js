@@ -149,4 +149,4 @@ function normalizeSettings(raw = {}) {
   };
 }
 
-module.exports = { DEFAULT_SETTINGS, SPEAK_MODES, MAX_CUSTOM_DAYS, normalizeSettings };
+module.exports = { MAX_CUSTOM_DAYS, normalizeSettings };

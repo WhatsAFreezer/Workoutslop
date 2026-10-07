@@ -528,13 +528,13 @@ function todayText(now) {
   return describeToday(todaySummary(store.history, now, EXERCISES));
 }
 
-// Forklarer, hvis mængden er tilpasset brugeren (progression eller "For hårdt").
-function adjustText(suggestion) {
-  if (suggestion.eased) return 'Sat ned – den er også lettere næste gang';
+// Kort tekst (og forklaring), hvis mængden er tilpasset brugeren (progression eller "For hårdt").
+function adjustment(suggestion) {
+  if (suggestion.eased) return { text: 'Sat ned', title: 'Den starter også lavere næste gang.' };
   const pct = Math.round(((suggestion.progress ?? 1) - 1) * 100);
-  if (pct >= 1) return `+${pct} % – du har klaret den før`;
-  if (pct <= -1) return `${pct} % efter "For hårdt"`;
-  return '';
+  if (pct >= 1) return { text: `+${pct} % sværere`, title: 'Du har klaret den flere gange, så den er gjort sværere.' };
+  if (pct <= -1) return { text: `${pct} % lettere`, title: 'Sat ned, fordi du har trykket "For hårdt".' };
+  return { text: '', title: '' };
 }
 
 function overlayPayload(current, fresh) {
@@ -557,7 +557,7 @@ function overlayPayload(current, fresh) {
     },
     amount: suggestion.amount,
     unitLabel: engine.unitLabel(ex, suggestion.amount),
-    adjustText: adjustText(suggestion),
+    adjust: adjustment(suggestion),
     canEase: engine.easierSuggestion(suggestion) != null,
     sinceText: engine.describeTimeSince(suggestion.minutesSinceLast),
     setText: setProgressText(ex, current.settingsOverride || settings),
@@ -637,7 +637,7 @@ const PAUSE_SIGNALS = {
   integration: (game) => `${game} fortæller selv, når kampen slutter`,
   process: () => 'Lobby og kamp skelnes på spillets programmer',
   focus: () => 'Du har alt-tabbet ud af spillet',
-  idle: () => `Ingen aktivitet i ${settings.idleSeconds} sek. = pause`,
+  idle: () => `Ingen aktivitet i ${settings.idleSeconds} sek.`,
   none: () => 'Kun genvejstasten (inaktivitet er slået fra)',
 };
 
@@ -674,16 +674,17 @@ function overviewStatus() {
   }
 
   const signals = [];
-  const kind = gameKind(definition);
+  // Kendte spil står bare med navn – fundne og egne spil får en forklaring.
+  const kind = definition?.custom || definition?.auto ? ` (${gameKind(definition)})` : '';
   signals.push({
     label: 'Spil',
-    value: game ? `${game.name} (${kind})` : 'Intet spil kører',
+    value: game ? `${game.name}${kind}` : 'Intet spil kører',
     // Et automatisk fundet program, der ikke er et spil, kan fjernes direkte herfra.
     action: game && definition?.auto ? { label: 'Ikke et spil', process: definition.processes[0] } : null,
   });
   if (game) {
     const source = lastPause.source in PAUSE_SIGNALS ? lastPause.source : 'idle';
-    signals.push({ label: 'Pauser findes ved', value: PAUSE_SIGNALS[source](game.name) });
+    signals.push({ label: 'Pausesignal', value: PAUSE_SIGNALS[source](game.name) });
   }
   let warning = null;
   if (game && caps.foregroundWindow && focus.gameFocused != null) {

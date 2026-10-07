@@ -285,22 +285,17 @@ function describeTimeSince(minutesSinceLast) {
   if (minutesSinceLast < 60) return `${Math.round(minutesSinceLast)} min. siden sidste øvelse`;
   const hours = Math.floor(minutesSinceLast / 60);
   const minutes = Math.round(minutesSinceLast % 60);
-  return `${hours} t. ${minutes} min. siden sidste øvelse`;
+  return minutes === 0 ? `${hours} t. siden sidste øvelse` : `${hours} t. ${minutes} min. siden sidste øvelse`;
 }
 
 module.exports = {
-  TIME_CURVE,
   FRESH_START_MINUTES,
   timeFactor,
   hasEquipment,
   allFocusAreas,
   focusAreasOf,
   focusGroups,
-  matchesFocus,
-  setsFor,
-  isEnabled,
   availableExercises,
-  setsDoneToday,
   dailyPlan,
   difficultyWeight,
   progressionFactor,
