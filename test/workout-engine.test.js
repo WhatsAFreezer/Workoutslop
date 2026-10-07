@@ -353,3 +353,39 @@ test('"For hårdt" sætter mængden ned, men aldrig under minimum', () => {
   assert.equal(engine.easierSuggestion(seconds).amount, 20);
   assert.equal(engine.easierSuggestion({ exercise: byId('plank'), amount: 10 }), null);
 });
+
+test('egne dage: kombinerer muskelgrupper og kan bruges som fokus', () => {
+  const { normalizeSettings } = require('../src/core/settings');
+  const s = normalizeSettings({
+    customDays: [
+      { id: 'day-push1', name: '  Push   dag ', groups: ['triceps', 'chest', 'shoulders', 'nonsense'] },
+      { id: 'day-push1', name: 'Dublet', groups: ['legs'] },
+      { id: 'ugyldigt id', name: 'X', groups: ['legs'] },
+      { id: 'day-empty', name: 'Tom', groups: [] },
+      { id: 'day-noname', groups: ['core'] },
+    ],
+    focus: ['day-push1', 'arms', 'day-unknown'],
+  });
+  assert.deepEqual(s.customDays, [
+    { id: 'day-push1', name: 'Push dag', groups: ['chest', 'shoulders', 'triceps'] },
+    { id: 'day-noname', name: 'Min dag', groups: ['core'] },
+  ]);
+  assert.deepEqual(s.focus, ['day-push1', 'arms']);
+
+  // Fokus på dagen giver kun øvelser fra dens muskelgrupper.
+  const settings = { level: 2, equipment: ['dumbbells', 'bench'], focus: ['day-push1'], customDays: s.customDays };
+  const groups = new Set(engine.availableExercises(EXERCISES, settings).map((e) => e.muscleGroup));
+  assert.deepEqual([...groups].sort(), ['chest', 'shoulders', 'triceps']);
+  assert.deepEqual([...engine.focusGroups(['day-push1', 'legsAbs'], s.customDays)].sort(), [
+    'cardio',
+    'chest',
+    'core',
+    'legs',
+    'shoulders',
+    'triceps',
+  ]);
+  assert.equal(engine.focusGroups([], s.customDays), null);
+  assert.deepEqual(engine.focusAreasOf(byId('diamondPushup'), s.customDays), ['arms', 'day-push1']);
+  // Slettes dagen, forsvinder den også fra fokus.
+  assert.deepEqual(normalizeSettings({ ...s, customDays: [] }).focus, ['arms']);
+});

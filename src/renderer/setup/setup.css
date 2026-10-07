@@ -1280,3 +1280,123 @@ button:focus-visible {
   display: block;
   color: var(--muted);
 }
+
+/* Egne dage (trin 3) ---------------------------------------------------------- */
+.focus-card {
+  position: relative;
+  display: grid;
+}
+.focus-card .focus-choice {
+  padding-bottom: 46px;
+}
+.focus-edit {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+}
+.focus-new {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-style: dashed;
+  background: none;
+}
+.focus-new:hover {
+  border-color: var(--accent);
+}
+.focus-new-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+}
+.focus-new-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.day-editor {
+  margin-top: 18px;
+  border-color: var(--accent);
+}
+.day-editor h2 {
+  margin: 0 0 12px;
+}
+.field-label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.text-input {
+  width: 100%;
+  max-width: 360px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
+.text-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.group-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.day-count {
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.day-count b {
+  color: var(--text);
+}
+.day-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.btn.danger {
+  margin-left: auto;
+  color: var(--danger);
+}
+
+/* Fokus i trin 4 ---------------------------------------------------------------- */
+.muscle.in-focus {
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.muscle.out-of-focus {
+  opacity: 0.62;
+}
+.muscle.out-of-focus:hover,
+.muscle.out-of-focus:focus-within {
+  opacity: 1;
+}
+.focus-badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 700;
+  vertical-align: 2px;
+}
+.muscle-divider {
+  margin: 10px 2px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}

@@ -169,11 +169,26 @@
             <p class="eyebrow">Trin 3 af 6</p>
             <h1>Hvad vil du træne?</h1>
             <p class="lead">
-              Vælg ét eller flere områder – fx <b>Bryst &amp; skuldre</b> + <b>Arme</b>. Du kan også skifte fokus fra
-              ikonet i systembakken, når du sætter dig til at spille.
+              Vælg ét eller flere områder – fx <b>Bryst &amp; skuldre</b> + <b>Arme</b> – eller lav dine egne dage med
+              de muskelgrupper, du vil kombinere. Du kan også skifte fokus fra ikonet i systembakken, når du sætter dig
+              til at spille.
             </p>
             <div class="focus-grid" id="focus"></div>
             <p class="count" id="focus-count"></p>
+
+            <section class="panel day-editor" id="day-editor" hidden>
+              <h2 id="day-editor-title">Lav din egen dag</h2>
+              <label class="field-label" for="day-name">Navn</label>
+              <input id="day-name" class="text-input" maxlength="40" placeholder="Fx Push, Overkrop eller Mandag" />
+              <p class="field-label">Muskelgrupper – vælg dem, du vil træne sammen</p>
+              <div class="group-chips" id="day-groups"></div>
+              <p class="day-count" id="day-count"></p>
+              <div class="day-actions">
+                <button type="button" class="btn primary" id="day-save">Gem dag</button>
+                <button type="button" class="btn" id="day-cancel">Annuller</button>
+                <button type="button" class="btn ghost danger" id="day-delete" hidden>Slet dag</button>
+              </div>
+            </section>
           </section>
 
           <!-- Trin 4 -->

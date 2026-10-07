@@ -41,7 +41,7 @@ const {
 const { GameFinder, isGameFocused, isKnownNonGame, gameFromPath } = require('../core/game-detection');
 const { EventLog, formatTime, formatReport } = require('../core/event-log');
 const { INTEGRATIONS, parseGsiPayload } = require('../core/gsi');
-const { normalizeSettings } = require('../core/settings');
+const { normalizeSettings, MAX_CUSTOM_DAYS } = require('../core/settings');
 const { PauseDetector } = require('../core/pause-detector');
 const { Coach } = require('../core/coach');
 const { todaySummary, describeToday, setsByDay, streakDays } = require('../core/stats');
@@ -76,6 +76,7 @@ const EDITABLE_KEYS = [
   'level',
   'equipment',
   'focus',
+  'customDays',
   'disabledExercises',
   'setsPerDay',
   'minMinutesBetween',
@@ -851,7 +852,11 @@ function debugSections(now) {
         [
           'Fokus',
           settings.focus.length
-            ? list(settings.focus.map((id) => FOCUS_AREAS.find((f) => f.id === id)?.name ?? id))
+            ? list(
+                settings.focus.map(
+                  (id) => engine.allFocusAreas(settings.customDays).find((f) => f.id === id)?.name ?? id,
+                ),
+              )
             : 'hele kroppen',
         ],
         [
@@ -934,7 +939,9 @@ function updateMenu(status) {
 
 function focusLabel(focus) {
   if (focus.length === 0) return 'Hele kroppen';
-  return FOCUS_AREAS.filter((area) => focus.includes(area.id))
+  return engine
+    .allFocusAreas(settings.customDays)
+    .filter((area) => focus.includes(area.id))
     .map((area) => area.name)
     .join(' + ');
 }
@@ -947,15 +954,17 @@ function setFocus(focus) {
 
 function focusMenu() {
   const focus = settings.focus;
+  const item = (area) => ({
+    label: area.name,
+    type: 'checkbox',
+    checked: focus.includes(area.id),
+    click: () => setFocus(focus.includes(area.id) ? focus.filter((id) => id !== area.id) : [...focus, area.id]),
+  });
   return [
     { label: 'Hele kroppen', type: 'checkbox', checked: focus.length === 0, click: () => setFocus([]) },
     { type: 'separator' },
-    ...FOCUS_AREAS.map((area) => ({
-      label: area.name,
-      type: 'checkbox',
-      checked: focus.includes(area.id),
-      click: () => setFocus(focus.includes(area.id) ? focus.filter((id) => id !== area.id) : [...focus, area.id]),
-    })),
+    ...FOCUS_AREAS.map(item),
+    ...(settings.customDays.length ? [{ type: 'separator' }, ...settings.customDays.map(item)] : []),
   ];
 }
 
@@ -1086,7 +1095,9 @@ function setupData() {
       equipment: EQUIPMENT,
       frequencies: FREQUENCIES,
       levelExamples: levelExamples(),
-      focusAreas: FOCUS_AREAS.map(({ id, name, description }) => ({ id, name, description })),
+      focusAreas: FOCUS_AREAS.map(({ id, name, description, groups }) => ({ id, name, description, groups })),
+      muscleGroups: Object.entries(MUSCLE_GROUPS).map(([id, name]) => ({ id, name })),
+      maxCustomDays: MAX_CUSTOM_DAYS,
       games: KNOWN_GAMES.map((g) => ({
         name: g.name,
         precise: Boolean(g.integration || g.matchProcesses),
@@ -1133,10 +1144,17 @@ function registerIpc() {
     if (!fromSetup(event)) return null;
     const draftValues = draftSettings(draft);
     const count = (focus) => engine.availableExercises(EXERCISES, { ...draftValues, focus }).length;
+    const byGroup = {};
+    for (const ex of engine.availableExercises(EXERCISES, { ...draftValues, focus: [] })) {
+      byGroup[ex.muscleGroup] = (byGroup[ex.muscleGroup] || 0) + 1;
+    }
     return {
       total: count(draftValues.focus),
       wholeBody: count([]),
-      byFocus: Object.fromEntries(FOCUS_AREAS.map((area) => [area.id, count([area.id])])),
+      byFocus: Object.fromEntries(
+        engine.allFocusAreas(draftValues.customDays).map((area) => [area.id, count([area.id])]),
+      ),
+      byGroup, // til "Lav din egen dag": antal øvelser pr. muskelgruppe
     };
   });
 
@@ -1144,16 +1162,20 @@ function registerIpc() {
   ipcMain.handle('setup:plan', (event, draft) => {
     if (!fromSetup(event)) return null;
     const draftValues = draftSettings(draft);
-    // Alle øvelser der passer til udstyr, niveau og fokus – også de fravalgte.
+    // Alle muskelgrupper vises – med de øvelser, der passer til udstyr og niveau (også de fravalgte).
+    // Grupperne i det valgte fokus markeres og kommer først.
     const candidates = engine.availableExercises(EXERCISES, {
       ...draftValues,
+      focus: [],
       disabledExercises: [],
       setsPerDay: null,
     });
+    const inFocus = engine.focusGroups(draftValues.focus, draftValues.customDays);
     const groups = Object.keys(MUSCLE_GROUPS)
       .map((group) => ({
         id: group,
         name: MUSCLE_GROUPS[group],
+        inFocus: !inFocus || inFocus.has(group),
         sets: draftValues.setsPerDay[group],
         exercises: candidates
           .filter((ex) => ex.muscleGroup === group)
@@ -1170,8 +1192,9 @@ function registerIpc() {
             };
           }),
       }))
-      .filter((group) => group.exercises.length > 0);
-    return { groups, maxSets: MAX_SETS_PER_DAY };
+      .filter((group) => group.exercises.length > 0)
+      .sort((a, b) => Number(b.inFocus) - Number(a.inFocus));
+    return { groups, wholeBody: !inFocus, maxSets: MAX_SETS_PER_DAY };
   });
 
   ipcMain.handle('setup:processes', async (event) => {

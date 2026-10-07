@@ -26,10 +26,13 @@ Linket giver altid den nyeste version, og appen opdaterer sig selv bagefter.
      udstyr får du kropsvægtsøvelser.
    - **Fokus** – hvad du vil træne: Bryst & skuldre, Ryg/nakke & holdning, Ben & mave, Arme – eller en
      kombination, fx Bryst & skuldre + Arme. "Arme" dækker biceps, triceps og underarme/greb. Vælger du
-     intet, får du hele kroppen.
-   - **Øvelser** – hvor mange sæt hver muskelgruppe skal have om dagen, og hvilke øvelser du vil have. Sættene
-     fordeles over de øvelser, du har valgt. Hold musen over en øvelse for at se den som animation, med
-     sværhedsgrad og hvordan den laves.
+     intet, får du hele kroppen. Med **Lav din egen dag** giver du en dag et navn og vælger selv, hvilke
+     muskelgrupper den kombinerer – fx "Push" med bryst, skuldre og triceps. Dine dage kan vælges her og fra
+     ikonet i systembakken, og de kan redigeres og slettes igen.
+   - **Øvelser** – hvor mange sæt hver muskelgruppe skal have om dagen, og hvilke øvelser du vil have. Alle
+     muskelgrupper vises; dem i dit fokus er fremhævet øverst, og resten trænes ikke, før du vælger dem i
+     Fokus. Sættene fordeles over de øvelser, du har valgt. Hold musen over en øvelse for at se den som
+     animation, med sværhedsgrad og hvordan den laves.
    - **Pauser** – hvor ofte du vil træne, om inaktivitet skal tælle som pause, hvilket hjørne overlayet skal
      vises i, og om øvelsen skal læses højt.
    - **Spil** – de spil appen kender, dine egne spil og den præcise integration til CS2 og Dota 2.

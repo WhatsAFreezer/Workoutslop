@@ -7,6 +7,7 @@ const {
   OVERLAY_POSITIONS,
   DEFAULT_SETS_PER_DAY,
   MAX_SETS_PER_DAY,
+  MUSCLE_GROUPS,
 } = require('./catalog');
 const { EXERCISES } = require('./exercises');
 const { INTEGRATIONS } = require('./gsi');
@@ -17,7 +18,8 @@ const DEFAULT_SETTINGS = {
   setupComplete: false,
   level: 2,
   equipment: [],
-  focus: [], // tom = hele kroppen
+  focus: [], // tom = hele kroppen. Id'er fra FOCUS_AREAS eller customDays.
+  customDays: [], // brugerens egne dage: { id, name, groups }
   disabledExercises: [], // øvelser brugeren har fravalgt
   setsPerDay: { ...DEFAULT_SETS_PER_DAY },
   minMinutesBetween: 10,
@@ -84,11 +86,37 @@ function normalizeCustomGames(list) {
   return result.slice(0, 40);
 }
 
+const MAX_CUSTOM_DAYS = 12;
+const GROUP_ORDER = Object.keys(MUSCLE_GROUPS);
+
+// Egne dage: et navn og en kombination af muskelgrupper, fx "Push" = bryst, skuldre og triceps.
+function normalizeCustomDays(raw) {
+  if (!Array.isArray(raw)) return [];
+  const result = [];
+  const seen = new Set();
+  for (const day of raw) {
+    if (!day || typeof day !== 'object') continue;
+    const id = typeof day.id === 'string' && /^day-[a-z0-9]{1,24}$/.test(day.id) ? day.id : null;
+    if (!id || seen.has(id)) continue;
+    const groups = Array.isArray(day.groups) ? GROUP_ORDER.filter((g) => day.groups.includes(g)) : [];
+    if (groups.length === 0) continue;
+    const name =
+      String(day.name ?? '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 40) || 'Min dag';
+    seen.add(id);
+    result.push({ id, name, groups });
+  }
+  return result.slice(0, MAX_CUSTOM_DAYS);
+}
+
 // Gør indstillinger gyldige, uanset om de kommer fra en gammel fil eller fra UI'et.
 function normalizeSettings(raw = {}) {
   const d = DEFAULT_SETTINGS;
   const knownEquipment = new Set(EQUIPMENT.map((e) => e.id));
-  const knownFocus = new Set(FOCUS_AREAS.map((f) => f.id));
+  const customDays = normalizeCustomDays(raw.customDays);
+  const knownFocus = new Set([...FOCUS_AREAS, ...customDays].map((f) => f.id));
   const knownExercises = new Set(EXERCISES.map((e) => e.id));
 
   return {
@@ -96,6 +124,7 @@ function normalizeSettings(raw = {}) {
     level: LEVELS.some((l) => l.id === Number(raw.level)) ? Number(raw.level) : d.level,
     equipment: Array.isArray(raw.equipment) ? [...new Set(raw.equipment.filter((id) => knownEquipment.has(id)))] : [],
     focus: Array.isArray(raw.focus) ? [...new Set(raw.focus.filter((id) => knownFocus.has(id)))] : [],
+    customDays,
     disabledExercises: Array.isArray(raw.disabledExercises)
       ? [...new Set(raw.disabledExercises.filter((id) => knownExercises.has(id)))]
       : [],
@@ -120,4 +149,4 @@ function normalizeSettings(raw = {}) {
   };
 }
 
-module.exports = { DEFAULT_SETTINGS, SPEAK_MODES, normalizeSettings };
+module.exports = { DEFAULT_SETTINGS, SPEAK_MODES, MAX_CUSTOM_DAYS, normalizeSettings };

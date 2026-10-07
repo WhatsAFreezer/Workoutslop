@@ -24,6 +24,21 @@
     legsAbs: ['squat', 1],
     arms: ['bicepCurl', 1],
   };
+  // Billedet på en egen dag: animationen for dagens første muskelgruppe.
+  const GROUP_FIGURES = {
+    chest: ['pushup', 0],
+    shoulders: ['shoulderPress', 1],
+    back: ['pullup', 1],
+    posture: ['wallAngel', 1],
+    neck: ['chinTuck', 1],
+    biceps: ['bicepCurl', 1],
+    triceps: ['benchDip', 1],
+    forearms: ['wristCurl', 1],
+    legs: ['squat', 1],
+    core: ['plank', 0],
+    cardio: ['jumpingJack', 1],
+  };
+  const PLUS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
   const CHECK_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>';
 
   let data = null; // alt hovedprocessen sender: katalog, indstillinger, status ...
@@ -131,13 +146,14 @@
       ' passer til dit niveau og dit udstyr.',
     );
     renderFocus();
+    renderDayEditor();
     renderPlan();
   }
 
   // --- Trin 3: fokus --------------------------------------------------------------
 
   function focusFigure(key) {
-    const [name, frame] = FOCUS_FIGURES[key];
+    const [name, frame] = Array.isArray(key) ? key : FOCUS_FIGURES[key];
     const anim = window.ANIMATIONS[name];
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('class', 'focus-figure');
@@ -199,19 +215,147 @@
         ],
       );
     });
-    $('focus').replaceChildren(allCard, ...areaCards);
+    const groupName = (id) => data.catalog.muscleGroups.find((g) => g.id === id)?.name ?? id;
+    const dayCards = draft.customDays.map((day) => {
+      const selected = draft.focus.includes(day.id);
+      const n = counts && counts.byFocus[day.id];
+      return el('div', { class: 'focus-card' }, [
+        el(
+          'button',
+          {
+            type: 'button',
+            class: 'choice focus-choice',
+            'aria-pressed': String(selected),
+            onclick: () => {
+              draft.focus = selected ? draft.focus.filter((id) => id !== day.id) : [...draft.focus, day.id];
+              renderFocus();
+              updateCount();
+            },
+          },
+          [
+            focusFigure(GROUP_FIGURES[day.groups[0]] || FOCUS_FIGURES.all),
+            el('span', { class: 'choice-title', text: day.name }),
+            el('span', { class: 'choice-text', text: day.groups.map(groupName).join(', ') }),
+            el('span', { class: n === 0 ? 'choice-example warn' : 'choice-example', text: focusCountText(n) }),
+            el('span', { class: 'choice-mark', html: CHECK_ICON }),
+          ],
+        ),
+        el('button', {
+          type: 'button',
+          class: 'btn small ghost focus-edit',
+          text: 'Redigér',
+          'aria-label': `Redigér ${day.name}`,
+          onclick: () => openDayEditor(day),
+        }),
+      ]);
+    });
+    const newCard =
+      draft.customDays.length < data.catalog.maxCustomDays
+        ? el('button', { type: 'button', class: 'choice focus-new', onclick: () => openDayEditor(null) }, [
+            el('span', { class: 'focus-new-icon', html: PLUS_ICON }),
+            el('span', { class: 'choice-title', text: 'Lav din egen dag' }),
+            el('span', {
+              class: 'choice-text',
+              text: 'Kombinér de muskelgrupper, du vil træne – fx bryst, skuldre og triceps.',
+            }),
+          ])
+        : null;
+    $('focus').replaceChildren(allCard, ...areaCards, ...dayCards, ...(newCard ? [newCard] : []));
 
     if (!counts) return;
-    const chosen = data.catalog.focusAreas.filter((area) => draft.focus.includes(area.id)).map((a) => a.name);
+    const chosen = [...data.catalog.focusAreas, ...draft.customDays]
+      .filter((area) => draft.focus.includes(area.id))
+      .map((a) => a.name);
     const label = chosen.length ? chosen.join(' + ') : 'hele kroppen';
     $('focus-count').replaceChildren(
       ...(counts.total === 0
         ? [
             el('b', { class: 'warn', text: 'Ingen øvelser passer. ' }),
-            'Vælg mere udstyr eller et andet fokus – indtil da får du øvelser til hele kroppen.',
+            'Vælg mere udstyr eller et andet fokus – ellers får du ingen øvelser.',
           ]
         : [el('b', { text: `${counts.total} øvelser` }), ` til ${label}.`]),
     );
+  }
+
+  // --- Egne dage -------------------------------------------------------------------
+
+  let editingDay = null; // { id (null = ny), name, groups }
+
+  function openDayEditor(day) {
+    editingDay = day ? { ...day, groups: [...day.groups] } : { id: null, name: '', groups: [] };
+    $('day-editor-title').textContent = day ? `Redigér ${day.name}` : 'Lav din egen dag';
+    $('day-name').value = editingDay.name;
+    $('day-delete').hidden = !day;
+    $('day-editor').hidden = false;
+    renderDayEditor();
+    $('day-editor').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    $('day-name').focus();
+  }
+
+  function closeDayEditor() {
+    editingDay = null;
+    $('day-editor').hidden = true;
+  }
+
+  function renderDayEditor() {
+    if (!editingDay) return;
+    $('day-groups').replaceChildren(
+      ...data.catalog.muscleGroups.map((group) => {
+        const selected = editingDay.groups.includes(group.id);
+        const n = counts?.byGroup?.[group.id] ?? 0;
+        return el(
+          'button',
+          {
+            type: 'button',
+            class: 'exercise-chip group-chip',
+            'aria-pressed': String(selected),
+            onclick: () => {
+              editingDay.groups = selected
+                ? editingDay.groups.filter((id) => id !== group.id)
+                : [...editingDay.groups, group.id];
+              renderDayEditor();
+            },
+          },
+          [el('span', { class: 'tick', html: CHECK_ICON }), group.name, el('small', { text: String(n) })],
+        );
+      }),
+    );
+    const total = editingDay.groups.reduce((sum, id) => sum + (counts?.byGroup?.[id] ?? 0), 0);
+    $('day-count').replaceChildren(
+      ...(editingDay.groups.length === 0
+        ? ['Vælg mindst én muskelgruppe.']
+        : [el('b', { text: `${total} øvelser` }), ' med dit udstyr og niveau.']),
+    );
+    $('day-save').disabled = editingDay.groups.length === 0;
+  }
+
+  function saveDay() {
+    if (!editingDay || editingDay.groups.length === 0) return;
+    const order = data.catalog.muscleGroups.map((g) => g.id);
+    const groups = order.filter((id) => editingDay.groups.includes(id));
+    const fallbackName = groups.map((id) => data.catalog.muscleGroups.find((g) => g.id === id).name).join(' + ');
+    const name = $('day-name').value.replace(/\s+/g, ' ').trim().slice(0, 40) || fallbackName.slice(0, 40);
+    if (editingDay.id) {
+      draft.customDays = draft.customDays.map((d) => (d.id === editingDay.id ? { ...d, name, groups } : d));
+    } else {
+      const id = `day-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+      draft.customDays = [...draft.customDays, { id, name, groups }];
+      // En ny dag vælges med det samme.
+      draft.focus = [...draft.focus, id];
+    }
+    closeDayEditor();
+    renderFocus();
+    updateCount();
+  }
+
+  function deleteDay() {
+    if (!editingDay?.id) return;
+    const id = editingDay.id;
+    draft.customDays = draft.customDays.filter((d) => d.id !== id);
+    draft.focus = draft.focus.filter((f) => f !== id);
+    closeDayEditor();
+    renderFocus();
+    updateCount();
   }
 
   // --- Trin 4: øvelser og sæt -----------------------------------------------------
@@ -339,7 +483,7 @@
     let totalExercises = 0;
     const cards = plan.groups.map((group) => {
       const enabled = group.exercises.filter((ex) => ex.enabled);
-      const active = group.sets > 0 && enabled.length > 0;
+      const active = group.inFocus && group.sets > 0 && enabled.length > 0;
       if (active) {
         totalSets += group.sets;
         totalExercises += enabled.length;
@@ -393,21 +537,47 @@
         ),
       );
 
-      return el('section', { class: group.sets > 0 ? 'muscle' : 'muscle off' }, [
+      const classes = ['muscle'];
+      if (group.sets === 0) classes.push('off');
+      if (!plan.wholeBody) classes.push(group.inFocus ? 'in-focus' : 'out-of-focus');
+      return el('section', { class: classes.join(' ') }, [
         el('div', { class: 'muscle-head' }, [
-          el('div', {}, [el('h2', { text: group.name }), el('small', { class: noteClass, text: note })]),
+          el('div', {}, [
+            el('h2', {}, [
+              group.name,
+              !plan.wholeBody && group.inFocus ? el('span', { class: 'focus-badge', text: 'I fokus' }) : null,
+            ]),
+            el('small', { class: noteClass, text: note }),
+          ]),
           stepper,
         ]),
         group.sets > 0 ? el('div', { class: 'exercise-chips' }, chips) : null,
       ]);
     });
 
+    // Med et valgt fokus: først grupperne i fokus, så resten under en overskrift.
+    const firstOther = plan.groups.findIndex((g) => !g.inFocus);
+    if (!plan.wholeBody && firstOther >= 0) {
+      cards.splice(
+        firstOther,
+        0,
+        el('p', { class: 'muscle-divider', text: 'Andre muskelgrupper – trænes ikke med det fokus, du har valgt' }),
+      );
+    }
     $('muscles').replaceChildren(...cards);
     exercisePreview.update(plan.groups);
     $('plan-summary').replaceChildren(
       ...(totalSets === 0
-        ? [el('b', { class: 'warn', text: 'Ingen sæt valgt. ' }), 'Giv mindst én muskelgruppe nogle sæt.']
-        : [el('b', { text: `${totalSets} sæt om dagen` }), ` fordelt på ${totalExercises} øvelser.`]),
+        ? [
+            el('b', { class: 'warn', text: 'Ingen sæt valgt. ' }),
+            plan.wholeBody
+              ? 'Giv mindst én muskelgruppe nogle sæt.'
+              : 'Giv mindst én muskelgruppe i dit fokus nogle sæt.',
+          ]
+        : [
+            el('b', { text: `${totalSets} sæt om dagen` }),
+            ` fordelt på ${totalExercises} øvelser${plan.wholeBody ? '' : ' i dit fokus'}.`,
+          ]),
     );
   }
 
@@ -959,6 +1129,12 @@
     $('preview').addEventListener('click', preview);
 
     $('nav-overview').addEventListener('click', showOverview);
+    $('day-save').addEventListener('click', saveDay);
+    $('day-cancel').addEventListener('click', closeDayEditor);
+    $('day-delete').addEventListener('click', deleteDay);
+    $('day-name').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') saveDay();
+    });
     $('nav-debug').addEventListener('click', showDebug);
     $('ov-debug').addEventListener('click', showDebug);
     $('debug-copy').addEventListener('click', copyDebugReport);

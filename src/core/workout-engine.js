@@ -66,14 +66,31 @@ function baseAmount(exercise, level) {
   return exercise.amounts[level - 1] ?? null;
 }
 
-// Det fokusområde en øvelse hører til – via dens muskelgruppe, fx ['backPosture'] for pull-ups.
-function focusAreasOf(exercise) {
-  return FOCUS_AREAS.filter((area) => area.groups.includes(exercise.muscleGroup)).map((area) => area.id);
+// Alle fokusområder: de faste og brugerens egne dage ({ id, name, groups }).
+function allFocusAreas(customDays = []) {
+  return [...FOCUS_AREAS, ...customDays];
 }
 
-// Intet fokus valgt = hele kroppen.
-function matchesFocus(exercise, focus) {
-  return !focus || focus.length === 0 || focusAreasOf(exercise).some((area) => focus.includes(area));
+// De fokusområder en øvelse hører til – via dens muskelgruppe, fx ['backPosture'] for pull-ups.
+function focusAreasOf(exercise, customDays = []) {
+  return allFocusAreas(customDays)
+    .filter((area) => area.groups.includes(exercise.muscleGroup))
+    .map((area) => area.id);
+}
+
+// Muskelgrupperne i det valgte fokus – eller null for hele kroppen (intet fokus valgt).
+function focusGroups(focus, customDays = []) {
+  if (!focus || focus.length === 0) return null;
+  return new Set(
+    allFocusAreas(customDays)
+      .filter((area) => focus.includes(area.id))
+      .flatMap((area) => area.groups),
+  );
+}
+
+function matchesFocus(exercise, focus, customDays = []) {
+  const groups = focusGroups(focus, customDays);
+  return !groups || groups.has(exercise.muscleGroup);
 }
 
 // Antal sæt om dagen for en muskelgruppe – eller null, hvis der ikke er sat noget mål.
@@ -93,7 +110,7 @@ function availableExercises(exercises, settings) {
     (ex) =>
       hasEquipment(ex, equipment) &&
       baseAmount(ex, level) != null &&
-      matchesFocus(ex, focus) &&
+      matchesFocus(ex, focus, settings.customDays) &&
       isEnabled(ex, settings),
   );
 }
@@ -276,7 +293,9 @@ module.exports = {
   FRESH_START_MINUTES,
   timeFactor,
   hasEquipment,
+  allFocusAreas,
   focusAreasOf,
+  focusGroups,
   matchesFocus,
   setsFor,
   isEnabled,
