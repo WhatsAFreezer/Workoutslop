@@ -4,16 +4,22 @@ body {
   background: var(--bg);
 }
 
+/* Vinduet scroller aldrig som helhed – kun indholdet (og sidebjælken, hvis skærmen er meget lav,
+   fx ved skalering i Windows). */
 .app {
   display: grid;
   grid-template-columns: 250px 1fr;
+  grid-template-rows: minmax(0, 1fr);
   height: 100%;
+  overflow: hidden;
 }
 
 /* Sidebar ------------------------------------------------------------------ */
 .sidebar {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
   gap: 28px;
   padding: 24px 18px;
   background: var(--panel);
@@ -138,12 +144,6 @@ body {
 }
 .update-box .btn {
   justify-self: start;
-}
-.sidebar-note {
-  margin: 0 6px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--faint);
 }
 
 /* Indhold ------------------------------------------------------------------ */
@@ -1401,4 +1401,19 @@ button:focus-visible {
   font-size: 13px;
   font-weight: 600;
   color: var(--muted);
+}
+
+/* Lave vinduer (fx 1080p med 150 % skalering i Windows): lidt tættere sidebjælke, så den kan være der. */
+@media (max-height: 760px) {
+  .sidebar {
+    gap: 18px;
+    padding: 18px 16px;
+  }
+  .nav button,
+  .nav-overview {
+    padding: 7px 10px;
+  }
+  .nav-overview {
+    margin-bottom: 10px;
+  }
 }
