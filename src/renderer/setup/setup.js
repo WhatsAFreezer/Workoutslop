@@ -1136,6 +1136,11 @@
       if (e.key === 'Enter') saveDay();
     });
     $('nav-debug').addEventListener('click', showDebug);
+    $('fullscreen-btn').addEventListener('click', () => api.toggleFullScreen());
+    api.onFullScreen((on) => {
+      $('fullscreen-btn').textContent = on ? 'Afslut fuld skærm' : 'Fuld skærm';
+      $('fullscreen-btn').title = on ? 'Afslut fuld skærm (F11 eller Esc)' : 'Fuld skærm (F11)';
+    });
     $('ov-debug').addEventListener('click', showDebug);
     $('debug-copy').addEventListener('click', copyDebugReport);
     $('ov-now').addEventListener('click', () => api.exerciseNow());

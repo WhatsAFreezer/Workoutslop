@@ -30,6 +30,8 @@ contextBridge.exposeInMainWorld('workoutslop', {
     updateGames: (action, processName) => ipcRenderer.invoke('games:update', { action, process: processName }),
     debugStatus: () => ipcRenderer.invoke('debug:status'),
     copyDebugReport: () => ipcRenderer.invoke('debug:copy'),
+    toggleFullScreen: () => ipcRenderer.send('window:toggle-fullscreen'),
+    onFullScreen: listen('window:fullscreen'),
   },
   overlay: {
     onShow: listen('overlay:show'),

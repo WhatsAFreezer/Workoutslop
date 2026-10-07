@@ -37,7 +37,8 @@ Linket giver altid den nyeste version, og appen opdaterer sig selv bagefter.
 
    Når opsætningen er gemt, viser vinduet **Oversigten**: om du spiller eller holder pause, hvad Workoutslop
    registrerer lige nu (spil, vindue, input, controller), dagens sæt pr. muskelgruppe og en graf over de sidste
-   7 dage. Det er også den side, du ser, når du åbner Workoutslop fra startmenuen.
+   7 dage. Det er også den side, du ser, når du åbner Workoutslop fra startmenuen. Vinduet kan gøres til fuld
+   skærm med **F11** eller knappen **Fuld skærm** nederst i sidebjælken (Esc går ud igen).
 2. **Spil som normalt.** Workoutslop opdager selv, når et spil kører, og viser øvelsen på den skærm, spillet
    kører på.
 3. **Lav øvelsen, når overlayet dukker op**, og tryk **Færdig**. Du kan også vælge **Anden** (en anden

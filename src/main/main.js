@@ -1049,11 +1049,15 @@ function openSetup() {
     setupWindow.focus();
     return;
   }
+  // Med høj skalering i Windows kan skærmen være mindre end vinduets normale størrelse. Så må
+  // vinduet ikke kræve mere plads, end der er – ellers kan det ikke maksimeres ordentligt.
+  const work = screen.getPrimaryDisplay().workAreaSize;
   setupWindow = new BrowserWindow({
-    width: 980,
-    height: 720,
-    minWidth: 860,
-    minHeight: 640,
+    width: Math.min(980, work.width),
+    height: Math.min(720, work.height),
+    minWidth: Math.min(860, work.width),
+    minHeight: Math.min(640, work.height),
+    fullscreenable: true,
     show: false,
     title: 'Workoutslop – opsætning',
     icon: APP_ICON,
@@ -1063,11 +1067,28 @@ function openSetup() {
   });
   setupWindow.removeMenu();
   lockDownNavigation(setupWindow);
+  // Uden menu virker F11 ikke af sig selv: F11 skifter fuld skærm, Esc går ud af den.
+  setupWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return;
+    if (input.key === 'F11') {
+      event.preventDefault();
+      toggleSetupFullScreen();
+    } else if (input.key === 'Escape' && setupWindow.isFullScreen()) {
+      setupWindow.setFullScreen(false);
+    }
+  });
+  const sendFullScreen = () => setupWindow?.webContents.send('window:fullscreen', setupWindow.isFullScreen());
+  setupWindow.on('enter-full-screen', sendFullScreen);
+  setupWindow.on('leave-full-screen', sendFullScreen);
   setupWindow.once('ready-to-show', () => setupWindow.show());
   setupWindow.on('closed', () => {
     setupWindow = null;
   });
   setupWindow.loadFile(path.join(RENDERER, 'setup', 'index.html'));
+}
+
+function toggleSetupFullScreen() {
+  if (setupWindow) setupWindow.setFullScreen(!setupWindow.isFullScreen());
 }
 
 function levelExamples() {
@@ -1306,6 +1327,7 @@ function registerIpc() {
       log: events.list().map((e) => ({ time: formatTime(e.at), text: e.text, count: e.count })),
     };
   });
+  ipcMain.on('window:toggle-fullscreen', (event) => fromSetup(event) && toggleSetupFullScreen());
   ipcMain.handle('debug:copy', (event) => {
     if (!fromSetup(event)) return false;
     clipboard.writeText(debugReport(Date.now()));

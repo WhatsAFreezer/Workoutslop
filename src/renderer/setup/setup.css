@@ -1215,9 +1215,13 @@ button:focus-visible {
   text-underline-offset: 2px;
   cursor: pointer;
 }
-.debug-link {
-  justify-self: start;
+.sidebar-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
   margin: 0 6px;
+}
+.debug-link {
   font-size: 12.5px;
 }
 .debug-link:hover,
