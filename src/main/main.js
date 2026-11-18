@@ -55,10 +55,13 @@ const APP_ICON = path.join(ROOT, 'assets', 'icon.png');
 const TRAY_ICON = path.join(ROOT, 'assets', process.platform === 'darwin' ? 'trayTemplate.png' : 'tray.png');
 
 const TICK_MS = 1000;
-const PROCESS_SCAN_MS = 5000;
+// Med Windows' egen procesliste er en scanning billig, så den kan køre oftere.
+const FAST_SCAN = windowsNative.capabilities().processList;
+const PROCESS_SCAN_MS = FAST_SCAN ? 2000 : 5000;
 const GSI_STALE_MS = 30 * 1000; // spillet sender et "heartbeat" hvert 10. sekund
 const SNOOZE_MINUTES = 10;
 const BACKGROUND_SECONDS = 15; // så længe skal spillet være i baggrunden, før det er en pause
+const AWAY_SECONDS = 10 * 60; // ingen input i så lang tid = du er gået fra computeren
 const UPDATE_INSTALL_AFTER_MS = 2 * 60 * 1000; // ingen spil i 2 min. = tid til at opdatere
 const OVERLAY_WIDTH = 392;
 const OVERLAY_MARGIN = 12;
@@ -128,13 +131,15 @@ const focus = {
   gameFullscreen: false, // fylder spillet hele skærmen?
 };
 const gameFinder = new GameFinder();
-const gameDetector = new GameDetector();
+// Et spil regnes som lukket efter ca. 6 sekunder uden at blive fundet.
+const gameDetector = new GameDetector({ missesBeforeClosed: FAST_SCAN ? 3 : 2 });
 
 // Fejlfinding: hvad appen har registreret og gjort (kun i hukommelsen).
 const events = new EventLog(300);
 const logEvent = (text) => events.add(text);
 let scanInfo = { at: 0, processes: 0, windowCheck: false, failed: false };
 let lastForegroundKey = '';
+let lastForegroundPath = null;
 let lastWindowless = '';
 let lastGsiLabel = '';
 let lastUpdateState = '';
@@ -152,6 +157,7 @@ const SOURCE_NAMES = {
 function describePause(p) {
   if (p.state === 'noGame') return 'Intet spil kører';
   const name = p.game?.name ?? 'Spil';
+  if (p.state === 'away') return `Væk fra computeren (${p.reason.toLowerCase()}) – ${name} kører stadig`;
   const signal = SOURCE_NAMES[p.source] ?? p.source;
   if (p.state === 'pause') return `Pause i ${name}: ${p.reason} (signal: ${signal})`;
   return `Spiller ${name} (signal: ${signal})`;
@@ -205,7 +211,10 @@ function trackForeground(now, idleSeconds) {
   focus.foreground = fg;
   const fgKey = `${exeName(fg.path)}|${fg.coversMonitor}|${fg.minimized}`;
   if (fgKey !== lastForegroundKey) {
+    // Nyt program i forgrunden: scan med det samme, så et spil, der lige er startet, findes straks.
+    if (exeName(fg.path) !== exeName(lastForegroundPath)) scanProcesses();
     lastForegroundKey = fgKey;
+    lastForegroundPath = fg.path;
     const how = fg.coversMonitor ? ' (fylder skærmen)' : fg.minimized ? ' (minimeret)' : '';
     logEvent(`Forgrund: ${exeName(fg.path)}${how}`);
   }
@@ -265,6 +274,7 @@ async function scanProcesses() {
       processes.map((p) => p.name),
       allGames(),
       windowed,
+      focus.foreground?.path ?? null,
     );
     scanInfo = { at: Date.now(), processes: processes.length, windowCheck: windowed != null, failed: false };
 
@@ -295,6 +305,7 @@ function tick() {
 
   // Windows tæller ikke controller-input som aktivitet, så vi bruger det korteste af de to.
   const idleSeconds = Math.min(powerMonitor.getSystemIdleTime(), gamepads.idleSeconds(now));
+  const locked = powerMonitor.getSystemIdleState(1) === 'locked';
   trackForeground(now, idleSeconds);
 
   const game = detected?.game ?? null;
@@ -310,6 +321,8 @@ function tick() {
     idleThreshold: settings.idleSeconds,
     backgroundSeconds: settings.useFocusDetection ? backgroundSeconds : null,
     backgroundThreshold: BACKGROUND_SECONDS,
+    locked,
+    awayThreshold: AWAY_SECONDS,
   });
   lastIdleSeconds = idleSeconds;
   if (lastPause.changed) logEvent(describePause(lastPause));
@@ -322,7 +335,8 @@ function tick() {
 // En hentet opdatering installeres automatisk, når der ikke har kørt et spil i
 // et par minutter, og der ikke vises en øvelse. Appen genstarter stille.
 function maybeInstallUpdate(now) {
-  if (lastPause.state !== 'noGame') noGameSince = now;
+  // Mens computeren er låst, eller ingen spil kører, er det et godt tidspunkt at genstarte.
+  if (lastPause.state !== 'noGame' && lastPause.state !== 'away') noGameSince = now;
   if (updater.status().state !== 'ready' || coach.current) return;
   if (now - noGameSince >= UPDATE_INSTALL_AFTER_MS) updater.install();
 }
@@ -664,6 +678,12 @@ function overviewStatus() {
     [title, subtitle, tone] = ['Motion er sat på pause', `Til kl. ${formatClock(coach.snoozedUntil)}`, 'paused'];
   } else if (plan.complete) {
     [title, subtitle, tone] = ['Dagens sæt er klaret', 'Godt gået! Workoutslop holder fri til i morgen.', 'done'];
+  } else if (lastPause.state === 'away' && game) {
+    [title, subtitle, tone] = [
+      'Du er væk fra computeren',
+      `${lastPause.reason}. ${game.name} kører stadig – øvelserne venter, til du er tilbage.`,
+      'idle',
+    ];
   } else if (lastPause.state === 'noGame' || !game) {
     [title, subtitle, tone] = ['Venter på et spil', 'Start et spil – Workoutslop finder det selv.', 'idle'];
   } else if (lastPause.state === 'pause') {
@@ -682,7 +702,7 @@ function overviewStatus() {
     // Et automatisk fundet program, der ikke er et spil, kan fjernes direkte herfra.
     action: game && definition?.auto ? { label: 'Ikke et spil', process: definition.processes[0] } : null,
   });
-  if (game) {
+  if (game && lastPause.state !== 'away') {
     const source = lastPause.source in PAUSE_SIGNALS ? lastPause.source : 'idle';
     signals.push({ label: 'Pausesignal', value: PAUSE_SIGNALS[source](game.name) });
   }
@@ -792,7 +812,10 @@ function debugSections(now) {
           'Sidste scanning',
           scanInfo.at
             ? `${ago(scanInfo.at)} – ${scanInfo.processes} programmer` +
-              (scanInfo.windowCheck ? ', med tjek af synlige vinduer' : '')
+              (scanInfo.windowCheck ? ', med tjek af synlige vinduer' : '') +
+              (FAST_SCAN
+                ? ` (Windows' procesliste, hvert ${PROCESS_SCAN_MS / 1000}. sek.)`
+                : ` (hvert ${PROCESS_SCAN_MS / 1000}. sek.)`)
             : 'endnu ikke',
         ],
         ['Kører uden vindue', list(gameDetector.windowless)],
@@ -823,6 +846,7 @@ function debugSections(now) {
       title: 'Pauser',
       rows: [
         ['Tilstand', describePause(lastPause)],
+        ['Computeren låst', yesNo(powerMonitor.getSystemIdleState(1) === 'locked')],
         [
           'Sidste input',
           `${Math.round(powerMonitor.getSystemIdleTime())} sek. siden (mus/tastatur)` +
@@ -884,6 +908,7 @@ function statusText(now) {
   const p = lastPause;
   if (p.state === 'noGame') return 'Venter på, at du starter et spil';
   const game = p.game?.name ?? 'Spil';
+  if (p.state === 'away') return `${game}: du er væk fra computeren`;
   if (p.state === 'playing') return `${game}: du spiller`;
   if (coach.current) return `${game}: pause – øvelse vist`;
   const reason = p.source === 'idle' ? 'ingen aktivitet' : p.reason.toLowerCase();

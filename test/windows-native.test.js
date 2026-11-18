@@ -10,7 +10,9 @@ test('uden for Windows slås funktionerne stille fra', { skip: process.platform 
     fullscreenDetection: false,
     foregroundWindow: false,
     windowList: false,
+    processList: false,
   });
+  assert.equal(native.processList(), null);
   assert.equal(native.readGamepad(0), null);
   assert.equal(native.notificationState(), null);
   assert.equal(native.foregroundWindow(), null);
@@ -25,6 +27,7 @@ test('Windows: controller, fuldskærm og forgrundsvindue kan aflæses', { skip: 
     fullscreenDetection: true,
     foregroundWindow: true,
     windowList: true,
+    processList: true,
   });
   for (let i = 0; i < native.XUSER_MAX_COUNT; i++) {
     const state = native.readGamepad(i);
@@ -48,4 +51,14 @@ test('Windows: controller, fuldskærm og forgrundsvindue kan aflæses', { skip: 
 
   // Et ugyldigt vindueshåndtag må ikke få appen til at crashe.
   assert.equal(native.bringToTop(Buffer.alloc(8)), false);
+});
+
+test('Windows: listen over kørende programmer læses direkte', { skip: process.platform !== 'win32' }, () => {
+  const list = native.processList();
+  assert.ok(Array.isArray(list) && list.length > 10, `fandt ${list?.length} programmer`);
+  // Testen selv kører i node.exe – den skal være på listen med sit eget proces-id.
+  const self = list.find((p) => p.pid === process.pid);
+  assert.ok(self, 'egen proces mangler');
+  assert.match(self.name, /^node(\.exe)?$/i);
+  assert.ok(list.every((p) => typeof p.name === 'string' && p.name.length > 0 && Number.isInteger(p.pid)));
 });

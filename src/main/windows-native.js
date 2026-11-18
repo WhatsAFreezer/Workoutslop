@@ -11,6 +11,8 @@
 //  - SetWindowPos: lægger overlayet øverst igen, hvis et spil har lagt sig ovenpå.
 //  - EnumWindows: hvilke programmer der har et synligt vindue. Mange spil lukker
 //    vinduet, før processen er helt lukket (eller bliver liggende i baggrunden).
+//  - CreateToolhelp32Snapshot: listen over kørende programmer. Langt hurtigere end
+//    at starte `tasklist` hvert par sekunder, så spil findes (og lukkes) hurtigere.
 //
 // På andre styresystemer – eller hvis noget fejler – returneres null, og appen
 // fortsætter uden funktionen.
@@ -27,6 +29,9 @@ const SWP_NOMOVE = 0x0002;
 const SWP_NOACTIVATE = 0x0010;
 const GWL_STYLE = -16;
 const WS_CAPTION = 0x00c00000; // titellinje – et almindeligt (evt. maksimeret) vindue
+const TH32CS_SNAPPROCESS = 0x00000002;
+const INVALID_HANDLE_VALUE = -1;
+const MAX_PATH = 260;
 
 let native; // undefined = ikke forsøgt endnu, null = ikke tilgængelig
 
@@ -110,7 +115,35 @@ function load() {
     };
   });
 
-  native = result.getState || result.notificationState || result.window ? result : null;
+  // PROCESSENTRY32W læses direkte fra en buffer; struct'en bruges kun til størrelse og placering.
+  result.processes = tryLoad(() => {
+    const ENTRY = koffi.struct('PROCESSENTRY32W', {
+      dwSize: 'uint32',
+      cntUsage: 'uint32',
+      th32ProcessID: 'uint32',
+      th32DefaultHeapID: 'uintptr_t',
+      th32ModuleID: 'uint32',
+      cntThreads: 'uint32',
+      th32ParentProcessID: 'uint32',
+      pcPriClassBase: 'int32',
+      dwFlags: 'uint32',
+      szExeFile: koffi.array('char16_t', MAX_PATH),
+    });
+    const kernel32 = koffi.load('kernel32.dll');
+    return {
+      size: koffi.sizeof(ENTRY),
+      pidOffset: koffi.offsetof(ENTRY, 'th32ProcessID'),
+      nameOffset: koffi.offsetof(ENTRY, 'szExeFile'),
+      CreateToolhelp32Snapshot: kernel32.func(
+        'intptr_t __stdcall CreateToolhelp32Snapshot(uint32 dwFlags, uint32 th32ProcessID)',
+      ),
+      Process32FirstW: kernel32.func('int __stdcall Process32FirstW(intptr_t hSnapshot, _Inout_ uint8 *lppe)'),
+      Process32NextW: kernel32.func('int __stdcall Process32NextW(intptr_t hSnapshot, _Inout_ uint8 *lppe)'),
+      CloseHandle: kernel32.func('int __stdcall CloseHandle(intptr_t hObject)'),
+    };
+  });
+
+  native = result.getState || result.notificationState || result.window || result.processes ? result : null;
   return native;
 }
 
@@ -201,6 +234,34 @@ function visibleWindowPids() {
   return ok ? pids : null;
 }
 
+// Alle kørende programmer som [{ name, pid }] – eller null, hvis listen ikke kan læses.
+function processList() {
+  const api = load()?.processes;
+  if (!api) return null;
+  const snapshot = Number(api.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+  if (!snapshot || snapshot === INVALID_HANDLE_VALUE) return null;
+  try {
+    const entry = Buffer.alloc(api.size);
+    const list = [];
+    entry.writeUInt32LE(api.size, 0);
+    let ok = api.Process32FirstW(snapshot, entry);
+    while (ok) {
+      // Navnet er UTF-16 og slutter med et nul-tegn.
+      let chars = 0;
+      while (chars < MAX_PATH && entry.readUInt16LE(api.nameOffset + chars * 2) !== 0) chars++;
+      const name = entry.toString('utf16le', api.nameOffset, api.nameOffset + chars * 2);
+      if (name) list.push({ name, pid: entry.readUInt32LE(api.pidOffset) });
+      entry.writeUInt32LE(api.size, 0);
+      ok = api.Process32NextW(snapshot, entry);
+    }
+    return list.length > 0 ? list : null;
+  } catch {
+    return null;
+  } finally {
+    api.CloseHandle(snapshot);
+  }
+}
+
 // Lægger et vindue øverst blandt "altid øverst"-vinduer uden at give det fokus.
 // `handle` er Buffer'en fra BrowserWindow.getNativeWindowHandle().
 function bringToTop(handle) {
@@ -217,6 +278,7 @@ function capabilities() {
     fullscreenDetection: Boolean(api?.notificationState),
     foregroundWindow: Boolean(api?.window),
     windowList: Boolean(api?.window && api?.enumWindows),
+    processList: Boolean(api?.processes),
   };
 }
 
@@ -226,6 +288,7 @@ module.exports = {
   notificationState,
   foregroundWindow,
   visibleWindowPids,
+  processList,
   bringToTop,
   capabilities,
 };

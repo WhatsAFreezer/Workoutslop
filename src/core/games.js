@@ -98,8 +98,11 @@ class GameDetector {
   }
 
   // windowed: navnene på processer med et synligt vindue – eller null, hvis det
-  // ikke kan afgøres (så bruges kun proceslisten). Returnerer { game, phase } eller null.
-  update(processNames, games, windowed = null) {
+  // ikke kan afgøres (så bruges kun proceslisten).
+  // foreground: programmet i forgrunden (navn eller sti) – kører flere spil, er det
+  // dét, man spiller. Ellers holdes fast i det spil, der allerede var fundet.
+  // Returnerer { game, phase } eller null.
+  update(processNames, games, windowed = null, foreground = null) {
     const isRunning = createProcessMatcher(processNames);
     const hasWindow = windowed ? createProcessMatcher([...windowed]) : null;
     this.windowless = [];
@@ -119,7 +122,13 @@ class GameDetector {
       return false;
     });
 
-    const found = detectGame(processNames, open);
+    const fg = foreground ? normalizeProcessName(foreground) : null;
+    const lastKey = this.last ? gameKey(this.last.game) : null;
+    const chosen =
+      (fg && open.find((game) => game.processes.some((p) => normalizeProcessName(p) === fg))) ||
+      open.find((game) => gameKey(game) === lastKey) ||
+      open[0];
+    const found = chosen ? detectGame(processNames, [chosen]) : null;
     if (found) {
       this.last = found;
       this.misses = 0;

@@ -9,6 +9,9 @@
 //  4. idle        – ingen mus, tastatur eller controller i et stykke tid, mens
 //                   spillet kører (kø, loadingskærm, mellem matches).
 //
+// Er computeren låst, eller har ingen rørt den i lang tid, er man væk ('away') –
+// så foreslås ingen øvelser, uanset hvad spillet siger.
+//
 // Kun 'integration' og 'process' er "præcise": de ved, hvornår en kamp starter.
 
 const PRECISE_SOURCES = new Set(['integration', 'process']);
@@ -26,8 +29,14 @@ function evaluate({
   idleThreshold,
   backgroundSeconds = null,
   backgroundThreshold = Infinity,
+  locked = false,
+  awayThreshold = Infinity,
 }) {
   if (!game) return { state: 'noGame', source: 'none', reason: 'Intet spil kører' };
+  if (locked) return { state: 'away', source: 'none', reason: 'Computeren er låst' };
+  if (idleSeconds >= awayThreshold) {
+    return { state: 'away', source: 'none', reason: `Ingen aktivitet i ${Math.floor(idleSeconds / 60)} min.` };
+  }
   if (integration) {
     return { state: integration.isBreak ? 'pause' : 'playing', source: 'integration', reason: integration.label };
   }

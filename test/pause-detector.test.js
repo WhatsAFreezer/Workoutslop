@@ -73,3 +73,21 @@ test('spillet i baggrunden (alt-tab) giver pause', () => {
   // Spillets egne signaler vinder: er man i kamp, er det ikke en pause.
   assert.equal(evaluate({ ...base, phase: 'match', backgroundSeconds: 99, backgroundThreshold: 15 }).state, 'playing');
 });
+
+test('låst computer eller lang inaktivitet = væk, også når spillet siger pause', () => {
+  const { evaluate } = require('../src/core/pause-detector');
+  const base = {
+    game: { id: 'cs2', name: 'CS2' },
+    idleSeconds: 5,
+    useIdle: true,
+    idleThreshold: 25,
+    awayThreshold: 600,
+  };
+  const integration = { isBreak: true, label: 'Kampen er slut' };
+  assert.equal(evaluate({ ...base, integration, locked: true }).state, 'away');
+  assert.equal(evaluate({ ...base, idleSeconds: 700 }).state, 'away');
+  assert.equal(evaluate({ ...base, idleSeconds: 700 }).reason, 'Ingen aktivitet i 11 min.');
+  assert.equal(evaluate({ ...base, idleSeconds: 30 }).state, 'pause');
+  // Intet spil vinder stadig.
+  assert.equal(evaluate({ ...base, game: null, locked: true }).state, 'noGame');
+});

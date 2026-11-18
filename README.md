@@ -67,9 +67,13 @@ Fra bakkeikonet kan du også skifte fokus (**Træn: …**), søge efter opdateri
 
 ### 1. Hvilket spil kører?
 
-Hvert 5. sekund henter appen listen over kørende programmer (`tasklist` på Windows, `ps` på macOS/Linux) og
-sammenligner med en liste over kendte spil, fx `cs2.exe`, `VALORANT-Win64-Shipping.exe` og
-`RocketLeague.exe`.
+Appen henter løbende listen over kørende programmer og sammenligner med en liste over kendte spil, fx
+`cs2.exe`, `VALORANT-Win64-Shipping.exe` og `RocketLeague.exe`. På Windows læses listen direkte fra systemet
+hvert 2. sekund (det koster næsten ingenting), og skifter du til et nyt program, scannes der med det samme – så
+et spil er fundet, så snart det er åbent. På macOS/Linux bruges `ps` hvert 5. sekund.
+
+Kører flere spil på én gang, er det spillet i forgrunden, der tæller. Alt-tabber du ud, holder appen fast i det
+spil, du spillede.
 
 På Windows ser appen desuden, hvilket program der er i forgrunden, og tilføjer selv nye spil:
 
@@ -87,8 +91,8 @@ finder appen et program, der ikke er et spil, kan du fjerne det med **Ikke et sp
 
 **Når du lukker spillet:** Mange spil lukker vinduet, før programmet er helt lukket – og nogle bliver liggende
 i baggrunden. På Windows tæller et spil derfor kun som åbent, så længe det har et synligt vindue. Et spil
-regnes som lukket, når det mangler to scanninger i træk (5–10 sekunder), og vises der en øvelse fra en pause i
-spillet, forsvinder den.
+regnes som lukket, når det har manglet i ca. 6 sekunder (så et vindue, der genskabes under en loadingskærm,
+ikke tæller), og vises der en øvelse fra en pause i spillet, forsvinder den.
 
 ### 2. Er der en pause?
 
@@ -103,6 +107,10 @@ Appen bruger det bedste signal, den har for det spil, du spiller:
 
 De præcise signaler skal være stabile i 2 sekunder, før appen tror på dem, så et enkelt mærkeligt
 datapunkt ikke får overlayet til at blinke.
+
+**Væk fra computeren:** Er computeren låst, eller har ingen rørt mus, tastatur eller controller i 10 minutter,
+er du ikke ved computeren – heller ikke selvom spillet kører eller siger, at kampen er slut. Så foreslås ingen
+øvelser, før du er tilbage. Det er også her, appen installerer en hentet opdatering.
 
 **CS2/Dota 2-integration:** Tryk **Installér** i opsætningen. Appen finder spillet i dine Steam-biblioteker og
 lægger en lille konfigurationsfil (`gamestate_integration_workoutslop.cfg`) i spillets `cfg`-mappe. Spillet

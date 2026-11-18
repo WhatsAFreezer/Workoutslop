@@ -190,3 +190,10 @@ test('dismiss lukker uden at registrere noget', () => {
   assert.equal(coach.current, null);
   assert.deepEqual(coach.dismiss(3000), []);
 });
+
+test('foreslår intet, mens man er væk fra computeren', () => {
+  const { coach } = makeCoach();
+  const away = { state: 'away', source: 'none', reason: 'Computeren er låst', game };
+  assert.deepEqual(coach.tick({ now: 0, pause: away, idleSeconds: 900, settings }), []);
+  assert.equal(coach.current, null);
+});

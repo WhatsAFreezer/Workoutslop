@@ -219,9 +219,7 @@ test('arme inkluderer underarme', () => {
   assert.ok(bodyweight.includes('closeGripPushup'));
   assert.ok(bodyweight.includes('underhandInvertedRow'));
   assert.ok(!bodyweight.includes('diamondPushup'));
-  const trained = engine
-    .availableExercises(EXERCISES, { level: 2, equipment: [], focus: ['arms'] })
-    .map((e) => e.id);
+  const trained = engine.availableExercises(EXERCISES, { level: 2, equipment: [], focus: ['arms'] }).map((e) => e.id);
   assert.ok(trained.includes('diamondPushup'));
 });
 

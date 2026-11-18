@@ -166,3 +166,16 @@ test('indstillinger gøres gyldige', () => {
   assert.equal(s.speak, 'fullscreen');
   assert.equal(s.setupComplete, false);
 });
+
+test('kører flere spil, vælges det i forgrunden – ellers det, der allerede var fundet', () => {
+  const d = new games.GameDetector();
+  const g = games.KNOWN_GAMES;
+  const running = ['cs2.exe', 'RocketLeague.exe'];
+  assert.equal(d.update(running, g, null, 'C:\\Games\\RocketLeague.exe').game.id, 'rocketleague');
+  // Alt-tab til noget andet: bliv ved det spil, man spillede.
+  assert.equal(d.update(running, g, null, 'C:\\Windows\\explorer.exe').game.id, 'rocketleague');
+  assert.equal(d.update(running, g, null, null).game.id, 'rocketleague');
+  assert.equal(d.update(running, g, null, 'cs2.exe').game.id, 'cs2');
+  // Lukkes det ene, findes det andet.
+  assert.equal(d.update(['RocketLeague.exe'], g, null, 'explorer.exe').game.id, 'rocketleague');
+});
