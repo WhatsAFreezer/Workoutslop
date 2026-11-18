@@ -6,7 +6,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
     />
-    <title>Workoutslop – opsætning</title>
+    <title>Workoutslop</title>
     <link rel="stylesheet" href="../shared/theme.css" />
     <link rel="stylesheet" href="setup.css" />
   </head>
@@ -36,32 +36,61 @@
           <ol class="nav" id="nav">
             <li>
               <button type="button" data-step="0">
-                <span class="num">1</span><span><b>Styrke</b><small>Dit niveau</small></span>
+                <span class="num"
+                  ><i>1</i
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 19v-3M10 19v-6M15 19v-9M20 19V6" /></svg></span
+                ><span><b>Styrke</b><small>Dit niveau</small></span>
               </button>
             </li>
             <li>
               <button type="button" data-step="1">
-                <span class="num">2</span><span><b>Udstyr</b><small>Dine redskaber</small></span>
+                <span class="num"
+                  ><i>2</i
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11" /></svg></span
+                ><span><b>Udstyr</b><small>Dine redskaber</small></span>
               </button>
             </li>
             <li>
               <button type="button" data-step="2">
-                <span class="num">3</span><span><b>Fokus</b><small>Hvad du vil træne</small></span>
+                <span class="num"
+                  ><i>3</i
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="8" />
+                    <circle cx="12" cy="12" r="3.5" /></svg></span
+                ><span><b>Fokus</b><small>Hvad du vil træne</small></span>
               </button>
             </li>
             <li>
               <button type="button" data-step="3">
-                <span class="num">4</span><span><b>Øvelser</b><small>Øvelser og sæt</small></span>
+                <span class="num"
+                  ><i>4</i
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M9.5 6.5H20M9.5 12H20M9.5 17.5H20M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" /></svg></span
+                ><span><b>Øvelser</b><small>Øvelser og sæt</small></span>
               </button>
             </li>
             <li>
               <button type="button" data-step="4">
-                <span class="num">5</span><span><b>Pauser</b><small>Hvornår og hvor</small></span>
+                <span class="num"
+                  ><i>5</i
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12.5" r="8" />
+                    <path d="M12 8.5v4l2.8 1.8M9.5 2.5h5" /></svg></span
+                ><span><b>Pauser</b><small>Hvornår og hvor</small></span>
               </button>
             </li>
             <li>
               <button type="button" data-step="5">
-                <span class="num">6</span><span><b>Spil</b><small>Hvad du spiller</small></span>
+                <span class="num"
+                  ><i>6</i
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M7.5 8h9a4.5 4.5 0 0 1 4.4 5.4l-.6 2.9a2 2 0 0 1-3.5.9L15.2 15H8.8l-1.6 2.2a2 2 0 0 1-3.5-.9l-.6-2.9A4.5 4.5 0 0 1 7.5 8z"
+                    />
+                    <path d="M8.5 10.5v3M7 12h3M15.5 11.2h.01M17 12.8h.01" /></svg></span
+                ><span><b>Spil</b><small>Hvad du spiller</small></span>
               </button>
             </li>
           </ol>
@@ -84,36 +113,71 @@
         <div class="scroll">
           <!-- Oversigt (vises, når opsætningen er gemt) -->
           <section class="step overview" data-step="overview" hidden>
-            <div class="ov-head">
-              <span class="tone-dot" id="ov-tone"></span>
-              <div>
-                <h1 id="ov-title"></h1>
-                <p class="lead" id="ov-subtitle"></p>
+            <p class="saved-note" id="ov-saved" hidden>
+              ✓ Opsætningen er gemt. Ændrer du noget senere, gemmes det med det samme.
+            </p>
+            <section class="hero" id="ov-hero">
+              <div class="hero-main">
+                <span class="tone-dot" id="ov-tone"></span>
+                <div class="hero-text">
+                  <h1 id="ov-title"></h1>
+                  <p class="hero-sub" id="ov-subtitle"></p>
+                </div>
+                <div class="hero-actions">
+                  <button type="button" class="btn primary" id="ov-now">
+                    Vis en øvelse nu <kbd id="ov-now-key"></kbd>
+                  </button>
+                  <button type="button" class="btn" id="ov-pause">Sæt på pause ▾</button>
+                </div>
               </div>
-            </div>
-            <p class="saved-note" id="ov-saved" hidden>✓ Indstillingerne er gemt.</p>
-            <div class="ov-actions">
-              <button type="button" class="btn primary" id="ov-now">Vis en øvelse nu</button>
-              <button type="button" class="btn" id="ov-pause">Sæt motion på pause i 1 time</button>
-            </div>
-            <p class="warning" id="ov-warning" hidden></p>
+              <dl class="facts" id="ov-signals"></dl>
+              <p class="warning" id="ov-warning" hidden></p>
+            </section>
+
             <div class="ov-grid">
-              <section class="panel">
-                <h2>Lige nu</h2>
-                <dl class="signals" id="ov-signals"></dl>
-              </section>
-              <section class="panel">
-                <h2>Dagens sæt</h2>
-                <p class="ov-hero"><b id="ov-done">0</b> <span id="ov-target"></span></p>
-                <div class="meters" id="ov-meters"></div>
-              </section>
               <section class="panel ov-wide">
-                <div class="ov-chart-head">
-                  <h2>Sæt pr. dag, de sidste 7 dage</h2>
-                  <span class="streak" id="ov-streak"></span>
+                <div class="panel-head">
+                  <h2>I dag</h2>
+                  <span class="panel-note" id="ov-left"></span>
+                </div>
+                <div class="today">
+                  <div class="ring" id="ov-ring">
+                    <svg viewBox="0 0 100 100" aria-hidden="true">
+                      <circle class="ring-track" cx="50" cy="50" r="42" />
+                      <circle class="ring-fill" id="ov-ring-fill" cx="50" cy="50" r="42" pathLength="100" />
+                    </svg>
+                    <div class="ring-text">
+                      <b id="ov-done">0</b>
+                      <small id="ov-target"></small>
+                    </div>
+                  </div>
+                  <div class="meters" id="ov-meters"></div>
+                </div>
+              </section>
+
+              <section class="panel ov-wide">
+                <div class="panel-head">
+                  <h2>Fokus</h2>
+                  <button type="button" class="inline-link panel-note" id="ov-focus-edit">Redigér dage</button>
+                </div>
+                <div class="focus-chips" id="ov-focus" role="group" aria-label="Fokus"></div>
+                <p class="hint" id="ov-focus-note"></p>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
+                  <h2>Sæt pr. dag</h2>
+                  <span class="panel-note" id="ov-streak"></span>
                 </div>
                 <div class="chart" id="ov-chart"></div>
                 <div class="sr-only"><table id="ov-table"></table></div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
+                  <h2>Seneste øvelser</h2>
+                </div>
+                <ol class="recent" id="ov-recent"></ol>
               </section>
             </div>
             <p class="ov-help">
@@ -168,8 +232,8 @@
             <p class="eyebrow">Trin 3 af 6</p>
             <h1>Hvad vil du træne?</h1>
             <p class="lead">
-              Vælg ét eller flere områder, eller lav dine egne dage. Du kan også skifte fokus fra ikonet ved uret, når
-              du sætter dig til at spille.
+              Vælg ét eller flere områder, eller lav dine egne dage. Du kan skifte fokus når som helst – fra oversigten
+              eller fra ikonet ved uret.
             </p>
             <div class="focus-grid" id="focus"></div>
             <p class="count" id="focus-count"></p>

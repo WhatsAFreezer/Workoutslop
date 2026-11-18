@@ -44,7 +44,7 @@ const { INTEGRATIONS, parseGsiPayload } = require('../core/gsi');
 const { normalizeSettings, MAX_CUSTOM_DAYS } = require('../core/settings');
 const { PauseDetector } = require('../core/pause-detector');
 const { Coach } = require('../core/coach');
-const { todaySummary, describeToday, setsByDay, streakDays } = require('../core/stats');
+const { todaySummary, describeToday, setsByDay, streakDays, recentExercises } = require('../core/stats');
 const { GamepadActivity } = require('../core/gamepad-activity');
 const windowsNative = require('./windows-native');
 
@@ -732,6 +732,7 @@ function overviewStatus() {
     },
     week: setsByDay(store.history, now, 7),
     streak: streakDays(store.history, now),
+    recent: recentExercises(store.history, now, EXERCISES, engine.describeAmount),
     hotkeyNow: hotkeyLabel('now'),
   };
 }
@@ -896,6 +897,7 @@ function createTray() {
   if (process.platform === 'darwin') image.setTemplateImage(true);
   tray = new Tray(image);
   tray.on('click', () => tray.popUpContextMenu());
+  tray.on('double-click', openSetup);
   refreshTray(true);
 }
 
@@ -951,6 +953,8 @@ function focusLabel(focus) {
 function setFocus(focus) {
   settings = store.saveSettings({ ...settings, focus });
   refreshTray(true);
+  // Er opsætningen åben, skal den vise det nye fokus (og ikke gemme det gamle oven i).
+  setupWindow?.webContents.send('setup:settings', pick(settings, EDITABLE_KEYS));
 }
 
 function focusMenu() {
@@ -966,6 +970,14 @@ function focusMenu() {
     { type: 'separator' },
     ...FOCUS_AREAS.map(item),
     ...(settings.customDays.length ? [{ type: 'separator' }, ...settings.customDays.map(item)] : []),
+  ];
+}
+
+function pauseMenu() {
+  return [
+    { label: '30 minutter', click: () => pauseExercises(Date.now() + 30 * 60000) },
+    { label: '1 time', click: () => pauseExercises(Date.now() + 60 * 60000) },
+    { label: 'Resten af dagen', click: () => pauseExercises(endOfToday(Date.now())) },
   ];
 }
 
@@ -1005,15 +1017,11 @@ function refreshTray(force = false) {
           }
         : {
             label: 'Sæt motion på pause',
-            submenu: [
-              { label: '30 minutter', click: () => pauseExercises(Date.now() + 30 * 60000) },
-              { label: '1 time', click: () => pauseExercises(Date.now() + 60 * 60000) },
-              { label: 'Resten af dagen', click: () => pauseExercises(endOfToday(Date.now())) },
-            ],
+            submenu: pauseMenu(),
           },
       { label: `Træn: ${focusLabel(settings.focus)}`, submenu: focusMenu() },
       { type: 'separator' },
-      { label: 'Opsætning…', click: openSetup },
+      { label: 'Åbn Workoutslop', click: openSetup },
       ...updateMenu(update),
       { label: 'Afslut Workoutslop', click: () => app.quit() },
     ]),
@@ -1053,13 +1061,13 @@ function openSetup() {
   // vinduet ikke kræve mere plads, end der er – ellers kan det ikke maksimeres ordentligt.
   const work = screen.getPrimaryDisplay().workAreaSize;
   setupWindow = new BrowserWindow({
-    width: Math.min(980, work.width),
-    height: Math.min(720, work.height),
+    width: Math.min(1120, work.width),
+    height: Math.min(780, work.height),
     minWidth: Math.min(860, work.width),
     minHeight: Math.min(640, work.height),
     fullscreenable: true,
     show: false,
-    title: 'Workoutslop – opsætning',
+    title: 'Workoutslop',
     icon: APP_ICON,
     backgroundColor: '#0d1017',
     autoHideMenuBar: true,
@@ -1290,8 +1298,17 @@ function registerIpc() {
   // Oversigten
   ipcMain.handle('app:status', (event) => (fromSetup(event) ? overviewStatus() : null));
   ipcMain.on('app:exercise-now', (event) => fromSetup(event) && runCommands(coach.requestNow(Date.now())));
-  ipcMain.on('app:pause', (event, minutes) => {
-    if (fromSetup(event) && Number.isFinite(minutes)) pauseExercises(Date.now() + minutes * 60000);
+  // Samme valg som i bakkemenuen, vist under knappen i oversigten. Svarer, når menuen lukkes.
+  ipcMain.handle('app:pause-menu', (event, { x, y } = {}) => {
+    if (!fromSetup(event)) return false;
+    return new Promise((resolve) => {
+      Menu.buildFromTemplate(pauseMenu()).popup({
+        window: setupWindow,
+        x: Math.round(x) || undefined,
+        y: Math.round(y) || undefined,
+        callback: () => resolve(true),
+      });
+    });
   });
   ipcMain.on('app:resume', (event) => {
     if (!fromSetup(event)) return;

@@ -55,3 +55,30 @@ test('hændelsesloggen tæller gentagelser op og holder en grænse', () => {
   assert.match(report, /^Rapport\n\n## App\nVersion: 1\.0\n\n## Hændelser \(nyeste først\)\n/);
   assert.match(report, /b \(×2\)/);
 });
+
+test('seneste øvelser: nyeste først, kun afsluttede, med dag og tid', () => {
+  const { recentExercises } = require('../src/core/stats');
+  const now = at(5, 20); // mandag
+  const exercises = [{ id: 'pushup', name: 'Armbøjninger', unit: 'reps' }];
+  const describe = (ex, amount) => `${amount} gentagelser`;
+  const history = [
+    done(at(1, 9)), // torsdag
+    done(at(4, 18)),
+    { ...done(at(5, 9)), status: 'easier' },
+    { ...done(at(5, 10)), status: 'skipped' },
+    { ...done(at(5, 11)), exerciseId: 'removed' },
+    done(at(6)), // i fremtiden – tælles ikke med
+  ];
+  const recent = recentExercises(history, now, exercises, describe);
+  assert.deepEqual(
+    recent.map((r) => [r.name, r.status, r.when]),
+    [
+      ['removed', 'done', 'I dag 11:00'],
+      ['Armbøjninger', 'skipped', 'I dag 10:00'],
+      ['Armbøjninger', 'done', 'I går 18:00'],
+      ['Armbøjninger', 'done', 'Tor. 09:00'],
+    ],
+  );
+  assert.equal(recent[2].amount, '10 gentagelser');
+  assert.equal(recentExercises(history, now, exercises, describe, 2).length, 2);
+});

@@ -20,9 +20,9 @@
   const FOCUS_FIGURES = {
     all: ['jumpingJack', 1],
     chestShoulders: ['pushup', 0],
-    backPosture: ['pullup', 1],
+    backPosture: ['invertedRow', 1],
     legsAbs: ['squat', 1],
-    arms: ['bicepCurl', 1],
+    arms: ['benchDip', 1],
   };
   // Billedet på en egen dag: animationen for dagens første muskelgruppe.
   const GROUP_FIGURES = {
@@ -39,6 +39,7 @@
   };
   const PLUS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
   const CHECK_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>';
+  const SKIP_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8h8"/></svg>';
 
   let data = null; // alt hovedprocessen sender: katalog, indstillinger, status ...
   let draft = null; // de indstillinger brugeren er ved at redigere
@@ -46,6 +47,8 @@
   let furthest = 0;
   let counts = null; // antal øvelser der passer, fra hovedprocessen
   let view = 'step'; // 'overview', 'debug' eller 'step'
+  let savedJson = ''; // draft, som det sidst blev gemt (efter opsætningen gemmes ændringer automatisk)
+  let saveTimer = null;
 
   // Laver et element. Tekst sættes altid som tekst (ikke HTML), så brugerinput er sikkert.
   function el(tag, props = {}, children = []) {
@@ -147,6 +150,7 @@
     renderFocus();
     renderDayEditor();
     renderPlan();
+    if (view === 'overview') renderOverviewFocus();
   }
 
   // --- Trin 3: fokus --------------------------------------------------------------
@@ -802,6 +806,7 @@
     button.disabled = update.state === 'checking' || update.state === 'downloading';
     button.textContent = update.state === 'ready' ? 'Genstart og opdatér' : 'Søg efter opdateringer';
     button.classList.toggle('primary', update.state === 'ready');
+    button.classList.toggle('ghost', update.state !== 'ready');
     button.onclick = () => (update.state === 'ready' ? api.installUpdate() : api.checkUpdates());
   }
 
@@ -915,37 +920,58 @@
   async function refreshOverview() {
     const status = await api.status();
     if (!status) return;
+    $('ov-hero').dataset.tone = status.tone;
     $('ov-tone').dataset.tone = status.tone;
     $('ov-title').textContent = status.title;
     $('ov-subtitle').textContent = status.subtitle;
-    $('ov-now').textContent = `Vis en øvelse nu (${status.hotkeyNow})`;
-    $('ov-pause').textContent = status.snoozed ? 'Genoptag motion' : 'Sæt motion på pause i 1 time';
+    $('ov-now-key').textContent = status.hotkeyNow;
+    $('ov-pause').textContent = status.snoozed ? 'Genoptag motion' : 'Sæt på pause ▾';
+    $('ov-pause').classList.toggle('primary', status.snoozed);
     $('ov-warning').hidden = !status.warning;
     $('ov-warning').textContent = status.warning || '';
 
     $('ov-signals').replaceChildren(
-      ...status.signals.flatMap((signal) => [
-        el('dt', { text: signal.label }),
-        el('dd', { class: signal.warn ? 'warn' : '' }, [
-          signal.value,
-          signal.action &&
-            el('button', {
-              type: 'button',
-              class: 'btn small ghost signal-action',
-              text: signal.action.label,
-              onclick: async () => {
-                data.games = await api.updateGames('remove', signal.action.process);
-                renderFoundGames();
-                refreshOverview();
-              },
-            }),
+      ...status.signals.map((signal) =>
+        el('div', { class: signal.warn ? 'fact warn' : 'fact' }, [
+          el('dt', { text: signal.label }),
+          el('dd', {}, [
+            signal.value,
+            signal.action &&
+              el('button', {
+                type: 'button',
+                class: 'inline-link signal-action',
+                text: signal.action.label,
+                onclick: async () => {
+                  data.games = await api.updateGames('remove', signal.action.process);
+                  renderFoundGames();
+                  refreshOverview();
+                },
+              }),
+          ]),
         ]),
-      ]),
+      ),
     );
 
-    const { today } = status;
+    renderToday(status.today);
+    renderOverviewFocus();
+    $('ov-streak').replaceChildren(
+      ...(status.streak > 0
+        ? [el('b', { text: status.streak === 1 ? '1 dag' : `${status.streak} dage` }), ' i træk']
+        : ['De sidste 7 dage']),
+    );
+    renderWeekChart(status.week);
+    renderRecent(status.recent);
+  }
+
+  function renderToday(today) {
+    const share = today.target ? Math.min(1, today.done / today.target) : 0;
+    $('ov-ring-fill').style.strokeDasharray = `${share * 100} 100`;
+    $('ov-ring-fill').style.opacity = share > 0 ? '1' : '0'; // ellers ses en prik ved 0
+    $('ov-ring').classList.toggle('complete', today.target > 0 && today.done >= today.target);
     $('ov-done').textContent = today.done;
     $('ov-target').textContent = today.target ? `af ${today.target} sæt` : 'sæt';
+    const left = Math.max(0, today.target - today.done);
+    $('ov-left').textContent = !today.target ? '' : left === 0 ? 'Alt klaret ✓' : `${left} sæt tilbage`;
     $('ov-meters').replaceChildren(
       ...(today.groups.length === 0
         ? [el('p', { class: 'empty-note', text: 'Ingen muskelgrupper har sæt i dag – vælg dem under Øvelser.' })]
@@ -953,20 +979,68 @@
             const fill = el('div', { class: 'meter-fill' });
             fill.style.width = `${group.target ? (group.done / group.target) * 100 : 0}%`;
             const done = group.done >= group.target;
-            return el('div', { class: 'meter' }, [
-              el('span', { text: group.name }),
-              el('span', { class: 'meter-value', text: `${group.done}/${group.target}${done ? ' ✓' : ''}` }),
+            return el('div', { class: done ? 'meter done' : 'meter' }, [
+              el('span', { class: 'meter-name', text: group.name }),
               el('div', { class: 'meter-track' }, [fill]),
+              el('span', { class: 'meter-value', text: done ? '✓' : `${group.done}/${group.target}` }),
             ]);
           })),
     );
+  }
 
-    $('ov-streak').replaceChildren(
-      ...(status.streak > 0
-        ? [el('b', { text: status.streak === 1 ? '1 dag' : `${status.streak} dage` }), ' i træk med motion']
-        : ['Ingen dage i træk endnu']),
+  // Fokus kan skiftes direkte fra oversigten – det gemmes med det samme.
+  function renderOverviewFocus() {
+    const options = [{ id: null, name: 'Hele kroppen' }, ...data.catalog.focusAreas, ...draft.customDays];
+    $('ov-focus').replaceChildren(
+      ...options.map((option) => {
+        const selected = option.id === null ? draft.focus.length === 0 : draft.focus.includes(option.id);
+        const n = option.id === null ? counts?.wholeBody : counts?.byFocus[option.id];
+        return el(
+          'button',
+          {
+            type: 'button',
+            class: n === 0 ? 'focus-chip empty' : 'focus-chip',
+            'aria-pressed': String(selected),
+            title: n == null ? '' : focusCountText(n),
+            onclick: async () => {
+              if (option.id === null) draft.focus = [];
+              else draft.focus = selected ? draft.focus.filter((id) => id !== option.id) : [...draft.focus, option.id];
+              renderOverviewFocus();
+              await updateCount();
+              await saveNow();
+              refreshOverview();
+            },
+          },
+          [el('span', { class: 'tick', html: CHECK_ICON }), option.name],
+        );
+      }),
     );
-    renderWeekChart(status.week);
+    $('ov-focus-edit').textContent = draft.customDays.length ? 'Redigér dage' : 'Lav din egen dag';
+    const note = $('ov-focus-note');
+    if (counts && counts.total === 0) {
+      note.className = 'hint warn';
+      note.textContent = 'Ingen øvelser passer til det fokus med dit udstyr – vælg et andet.';
+    } else {
+      note.className = 'hint';
+      note.textContent = 'Kan også skiftes fra ikonet ved uret.';
+    }
+  }
+
+  function renderRecent(recent) {
+    $('ov-recent').replaceChildren(
+      ...(recent.length === 0
+        ? [el('li', { class: 'empty', text: 'Ingen øvelser endnu. Når du har lavet den første, står den her.' })]
+        : recent.map((item) =>
+            el('li', { class: `recent-item ${item.status}` }, [
+              el('span', { class: 'recent-icon', html: item.status === 'done' ? CHECK_ICON : SKIP_ICON }),
+              el('span', { class: 'recent-name' }, [
+                item.name,
+                el('small', { text: item.status === 'done' ? item.amount : item.statusText.toLowerCase() }),
+              ]),
+              el('time', { class: 'recent-time', text: item.when }),
+            ]),
+          )),
+    );
   }
 
   // Søjlediagram over sæt pr. dag. Én serie, så ingen forklaring – titlen siger det.
@@ -1019,7 +1093,7 @@
         col = node('path', { class: 'col', d });
         svg.append(col);
       }
-      if (isToday) {
+      if (isToday && day.sets > 0) {
         svg.append(node('text', { class: 'value', x: cx, y: base - h - 6, 'text-anchor': 'middle' }, String(day.sets)));
       }
       svg.append(
@@ -1050,7 +1124,10 @@
       });
       svg.append(hit);
     });
-    box.replaceChildren(svg, tip);
+    const empty = week.every((day) => day.sets === 0)
+      ? el('p', { class: 'chart-empty', text: 'Ingen sæt de sidste 7 dage endnu.' })
+      : null;
+    box.replaceChildren(svg, tip, ...(empty ? [empty] : []));
 
     // Tabel til skærmlæsere med de samme tal.
     $('ov-table').replaceChildren(
@@ -1080,18 +1157,62 @@
       const index = Number(button.dataset.step);
       if (index === step) button.setAttribute('aria-current', 'step');
       else button.removeAttribute('aria-current');
-      button.classList.toggle('done', index < furthest && index !== step);
+      button.classList.toggle('done', data.firstRun && index < furthest && index !== step);
       button.disabled = data.firstRun && index > furthest;
     }
 
+    // Under opsætningen: Tilbage/Næste. Bagefter er siderne almindelige indstillinger, der gemmes af sig selv.
     const last = step === STEP_COUNT - 1;
-    $('back').hidden = step === 0;
-    $('next').hidden = last;
-    $('next').classList.toggle('primary', data.firstRun);
-    $('save').hidden = data.firstRun && !last;
-    $('save').textContent = data.firstRun ? 'Gem og start' : 'Gem';
+    $('back').hidden = !data.firstRun || step === 0;
+    $('next').hidden = !data.firstRun || last;
+    $('save').hidden = !data.firstRun || !last;
     document.querySelector('.scroll').scrollTop = 0;
     setStatus('');
+  }
+
+  function applyMode() {
+    document.body.classList.toggle('configured', !data.firstRun);
+  }
+
+  // --- Automatisk gem (efter opsætningen) ----------------------------------------------
+
+  function markSaved() {
+    savedJson = JSON.stringify(draft);
+  }
+
+  // Kaldes efter hvert klik og hver indtastning: er noget ændret, gemmes det lidt efter.
+  function checkDirty() {
+    if (data.firstRun || !draft || JSON.stringify(draft) === savedJson) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 400);
+  }
+
+  async function saveNow() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    if (data.firstRun) return;
+    const json = JSON.stringify(draft);
+    if (json === savedJson) return;
+    const result = await api.save(draft);
+    if (!result || !result.ok) {
+      setStatus('Kunne ikke gemme ændringen. Prøv igen.');
+      return;
+    }
+    savedJson = json;
+    if (view === 'step') {
+      setStatus('✓ Gemt');
+      clearTimeout(saveNow.clear);
+      saveNow.clear = setTimeout(() => $('status').textContent === '✓ Gemt' && setStatus(''), 2500);
+    }
+  }
+
+  // Fokus ændret fra ikonet ved uret, mens vinduet er åbent.
+  function applyExternalSettings(next) {
+    if (!draft || JSON.stringify(draft.focus) === JSON.stringify(next.focus)) return;
+    draft.focus = [...next.focus];
+    if (!saveTimer) markSaved();
+    updateCount();
+    if (view === 'overview') refreshOverview();
   }
 
   async function save() {
@@ -1104,11 +1225,13 @@
       return;
     }
     data.firstRun = false;
+    markSaved();
+    applyMode();
     showOverview();
     const note = $('ov-saved');
     note.hidden = false;
     clearTimeout(note.timer);
-    note.timer = setTimeout(() => (note.hidden = true), 4000);
+    note.timer = setTimeout(() => (note.hidden = true), 8000);
   }
 
   async function preview() {
@@ -1141,12 +1264,24 @@
       $('fullscreen-btn').title = on ? 'Afslut fuld skærm (F11 eller Esc)' : 'Fuld skærm (F11)';
     });
     $('ov-debug').addEventListener('click', showDebug);
+    $('ov-focus-edit').addEventListener('click', () => goTo(2));
+    for (const type of ['click', 'input', 'change', 'keydown']) {
+      document.addEventListener(type, () => setTimeout(checkDirty, 0));
+    }
+    // Lukkes vinduet lige efter en ændring, gemmes den alligevel.
+    window.addEventListener('beforeunload', () => {
+      if (!data.firstRun && JSON.stringify(draft) !== savedJson) api.save(draft);
+    });
+    api.onSettings(applyExternalSettings);
     $('debug-copy').addEventListener('click', copyDebugReport);
     $('ov-now').addEventListener('click', () => api.exerciseNow());
     $('ov-pause').addEventListener('click', async () => {
       const status = await api.status();
       if (status.snoozed) api.resume();
-      else api.pauseFor(60);
+      else {
+        const r = $('ov-pause').getBoundingClientRect();
+        await api.pauseMenu({ x: r.left, y: r.bottom + 4 });
+      }
       setTimeout(refreshOverview, 200);
     });
     $('focus-toggle').addEventListener('change', (e) => {
@@ -1184,6 +1319,8 @@
   async function init() {
     data = await api.get();
     draft = JSON.parse(JSON.stringify(data.settings));
+    markSaved();
+    applyMode();
     furthest = data.firstRun ? 0 : STEP_COUNT - 1;
 
     renderLevels();

@@ -33,11 +33,13 @@ Linket giver altid den nyeste version, og appen opdaterer sig selv bagefter.
      vises i, og om øvelsen skal læses højt.
    - **Spil** – de spil appen kender, dine egne spil og den præcise integration til CS2 og Dota 2.
 
-   <img src="docs/overview.png" width="640" alt="Oversigten: status, dagens sæt og en graf over ugen">
+   <img src="docs/overview.png" width="640" alt="Oversigten: status, dagens sæt, fokus, ugen og de seneste øvelser">
 
    Når opsætningen er gemt, viser vinduet **Oversigten**: om du spiller eller holder pause, hvad Workoutslop
-   registrerer lige nu (spil, vindue, input, controller), dagens sæt pr. muskelgruppe og en graf over de sidste
-   7 dage. Det er også den side, du ser, når du åbner Workoutslop fra startmenuen. Vinduet kan gøres til fuld
+   registrerer lige nu (spil, vindue, input, controller), dagens sæt pr. muskelgruppe, en graf over de sidste
+   7 dage og dine seneste øvelser. Herfra kan du også skifte fokus med ét klik og sætte motion på pause. Det er
+   den side, du ser, når du åbner Workoutslop fra startmenuen (eller dobbeltklikker på ikonet ved uret).
+   Bagefter er trinene almindelige indstillinger – ændringer gemmes med det samme. Vinduet kan gøres til fuld
    skærm med **F11** eller knappen **Fuld skærm** nederst i sidebjælken (Esc går ud igen).
 2. **Spil som normalt.** Workoutslop opdager selv, når et spil kører, og viser øvelsen på den skærm, spillet
    kører på.

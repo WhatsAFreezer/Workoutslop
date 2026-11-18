@@ -57,9 +57,41 @@ function streakDays(history, now) {
   return streak;
 }
 
+// De seneste afsluttede øvelser (nyeste først) til oversigten.
+// "easier" er kun et mellemtrin, så den springes over.
+const FINISHED = { done: 'Klaret', skipped: 'Sprunget over', missed: 'Ikke nået' };
+
+function dayLabel(at, now) {
+  const days = Math.round((startOfDay(now) - startOfDay(at)) / 86400000);
+  if (days === 0) return 'I dag';
+  if (days === 1) return 'I går';
+  const name = DAY_NAMES[new Date(at).getDay()];
+  return days < 7 ? name[0].toUpperCase() + name.slice(1) + '.' : new Date(at).toLocaleDateString('da-DK');
+}
+
+function recentExercises(history, now, exercises, describeAmount, limit = 6) {
+  const byId = new Map(exercises.map((ex) => [ex.id, ex]));
+  const pad = (n) => String(n).padStart(2, '0');
+  const result = [];
+  for (let i = history.length - 1; i >= 0 && result.length < limit; i--) {
+    const entry = history[i];
+    if (!(entry.status in FINISHED) || entry.at > now) continue;
+    const ex = byId.get(entry.exerciseId);
+    const d = new Date(entry.at);
+    result.push({
+      name: ex ? ex.name : entry.exerciseId,
+      amount: ex ? describeAmount(ex, entry.amount) : String(entry.amount),
+      status: entry.status,
+      statusText: FINISHED[entry.status],
+      when: `${dayLabel(entry.at, now)} ${pad(d.getHours())}:${pad(d.getMinutes())}`,
+    });
+  }
+  return result;
+}
+
 function describeToday(summary) {
   if (summary.count === 0) return 'Ingen øvelser i dag endnu';
   return summary.count === 1 ? '1 øvelse i dag' : `${summary.count} øvelser i dag`;
 }
 
-module.exports = { startOfDay, todaySummary, describeToday, setsByDay, streakDays };
+module.exports = { startOfDay, todaySummary, describeToday, setsByDay, streakDays, recentExercises };
