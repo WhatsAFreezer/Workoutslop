@@ -69,6 +69,7 @@
 
     resetTimer();
     $('done').classList.remove('ready');
+    $('remove').disabled = false;
     setMode(next.mode);
     if (next.fresh && next.sound) chime();
     // Oplæsning – fx når spillet kører i eksklusiv fuldskærm og overlayet ikke kan ses.
@@ -86,6 +87,9 @@
     $('timer-btn').textContent = 'Start timer';
   }
 
+  // Tre sekunder til at komme i position, før tiden går.
+  const GET_READY_SECONDS = 3;
+
   function startTimer() {
     if (!payload) return;
     if (timer) {
@@ -93,9 +97,14 @@
       return;
     }
     const total = payload.amount;
-    const startedAt = Date.now();
+    const startedAt = Date.now() + GET_READY_SECONDS * 1000;
     const update = () => {
       const elapsed = (Date.now() - startedAt) / 1000;
+      if (elapsed < 0) {
+        $('timer-fill').style.width = '0%';
+        $('timer-btn').textContent = `Klar … ${Math.ceil(-elapsed)}`;
+        return;
+      }
       const left = Math.max(0, Math.ceil(total - elapsed));
       $('timer-fill').style.width = `${Math.min(100, (elapsed / total) * 100)}%`;
       $('timer-btn').textContent = left > 0 ? `${left} sek. – stop` : 'Tiden er gået!';
@@ -164,6 +173,10 @@
   $('snooze').addEventListener('click', () => api.snooze());
   $('compact-open').addEventListener('click', () => api.expand());
   $('timer-btn').addEventListener('click', startTimer);
+  $('remove').addEventListener('click', () => {
+    $('remove').disabled = true;
+    api.remove();
+  });
 
   api.onShow(render);
   api.onMode((mode) => {

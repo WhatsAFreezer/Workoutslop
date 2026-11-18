@@ -215,7 +215,25 @@ test('arme inkluderer underarme', () => {
   const bodyweight = engine
     .availableExercises(EXERCISES, { level: 1, equipment: [], focus: ['arms'] })
     .map((e) => e.id);
-  assert.ok(bodyweight.includes('diamondPushup'));
+  // Begyndere får de lette udgaver – diamant-armbøjninger først fra niveau 2.
+  assert.ok(bodyweight.includes('closeGripPushup'));
+  assert.ok(bodyweight.includes('underhandInvertedRow'));
+  assert.ok(!bodyweight.includes('diamondPushup'));
+  const trained = engine
+    .availableExercises(EXERCISES, { level: 2, equipment: [], focus: ['arms'] })
+    .map((e) => e.id);
+  assert.ok(trained.includes('diamondPushup'));
+});
+
+test('uden udstyr har alle muskelgrupper undtagen underarme noget på alle niveauer', () => {
+  for (const level of [1, 2, 3, 4]) {
+    const groups = new Set(
+      engine.availableExercises(EXERCISES, { level, equipment: [], focus: [] }).map((e) => e.muscleGroup),
+    );
+    for (const group of ['chest', 'back', 'posture', 'neck', 'biceps', 'triceps', 'legs', 'core']) {
+      assert.ok(groups.has(group), `${group} på niveau ${level}`);
+    }
+  }
 });
 
 const MIN = 60 * 1000;

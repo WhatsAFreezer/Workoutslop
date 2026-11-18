@@ -181,3 +181,12 @@ test('eksempler fra opsætningen gemmes ikke i historikken', () => {
   assert.deepEqual(types(coach.complete(200)), ['hide']);
   assert.equal(coach.lastCompletedAt, -Infinity);
 });
+
+test('dismiss lukker uden at registrere noget', () => {
+  const { coach } = makeCoach();
+  coach.tick({ now: 0, pause: playing(), idleSeconds: 0, settings });
+  coach.tick({ now: 1000, pause: pause(), idleSeconds: 0, settings });
+  assert.deepEqual(types(coach.dismiss(2000)), ['hide']);
+  assert.equal(coach.current, null);
+  assert.deepEqual(coach.dismiss(3000), []);
+});

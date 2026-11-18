@@ -142,6 +142,15 @@ class Coach {
     return [{ type: 'record', entry: this.entry(now, next, 'easier') }, show];
   }
 
+  // Lukker uden at registrere noget – fx når øvelsen lige er fjernet, og der ikke er en anden.
+  dismiss(now) {
+    if (!this.current) return [];
+    const preview = this.current.trigger === 'preview';
+    this.current = null;
+    if (!preview) this.lastDismissedAt = now;
+    return [{ type: 'hide' }];
+  }
+
   complete(now) {
     return this.finish(now, 'done');
   }

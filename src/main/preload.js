@@ -46,5 +46,6 @@ contextBridge.exposeInMainWorld('workoutslop', {
     easier: () => ipcRenderer.send('overlay:easier'),
     snooze: () => ipcRenderer.send('overlay:snooze'),
     expand: () => ipcRenderer.send('overlay:expand'),
+    remove: () => ipcRenderer.send('overlay:remove'),
   },
 });

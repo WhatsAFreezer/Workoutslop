@@ -44,7 +44,8 @@ Linket giver altid den nyeste version, og appen opdaterer sig selv bagefter.
 2. **Spil som normalt.** Workoutslop opdager selv, når et spil kører, og viser øvelsen på den skærm, spillet
    kører på.
 3. **Lav øvelsen, når overlayet dukker op**, og tryk **Færdig**. Du kan også vælge **Anden** (en anden
-   øvelse), **Om 10 min** (udsæt), **For hårdt?** (færre gentagelser) eller **✕** (spring over).
+   øvelse), **Om 10 min** (udsæt), **For hårdt?** (færre gentagelser) eller **✕** (spring over). Vil du aldrig
+   have en øvelse igen, så tryk **Fjern den** nederst – den kan slås til igen under **Øvelser**.
 4. Starter næste kamp, før du har trykket på noget, bliver overlayet til en lille bjælke: "Nåede du det?"
 
 ### Genvejstaster (virker også inde i spillet)
@@ -123,7 +124,8 @@ faktor, der afhænger af tiden siden din sidste øvelse:
 
 Kort tid siden betyder trætte muskler og færre gentagelser. Lang tid betyder mere overskud. Er der gået
 mere end 6 timer, starter du forfra med normal mængde, fordi du ikke er varmet op. Øvelser på tid (planke,
-vægsid, hæng i stangen) rundes til hele 5 sekunder og har en indbygget timer.
+vægsid, hæng i stangen) rundes til hele 5 sekunder og har en indbygget timer, der giver dig 3 sekunder til at
+komme i position. Under **Øvelser** står din egen mængde med fremgang, og hvor mange gange du har lavet øvelsen.
 
 **Mængden følger dig:** Hver 3. gang du gennemfører en øvelse, bliver den 5 % sværere (højst +50 %). Er den
 for hård, så tryk **For hårdt?** under tallet – så sættes mængden ned med det samme, og den starter 20 % lavere
@@ -168,7 +170,7 @@ at have et ikon i systembakken og at læse, hvor længe mus og tastatur har vær
 src/
   core/                    Logikken – ren JavaScript uden Electron, så den kan testes
     catalog.js             Styrkeniveauer, udstyr, fokusområder, muskelgrupper
-    exercises.js           Alle 76 øvelser med mængder, sværhedsgrad, trin og tips
+    exercises.js           Alle 78 øvelser med mængder, sværhedsgrad, trin og tips
     workout-engine.js      Vælger øvelse og udregner antal gentagelser
     games.js               Kendte spil og genkendelse af kørende programmer
     gsi.js                 CS2/Dota 2 Game State Integration

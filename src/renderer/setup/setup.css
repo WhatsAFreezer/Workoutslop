@@ -938,6 +938,19 @@ button:focus-visible {
   font-size: 12.5px;
   line-height: 1.45;
 }
+.ex-preview-history {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.ex-preview-history .up {
+  color: var(--accent);
+  font-weight: 650;
+}
+.ex-preview-history .down {
+  color: var(--warn);
+  font-weight: 650;
+}
 .ex-preview-hint {
   margin: 8px 2px 0;
   color: var(--muted);

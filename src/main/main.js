@@ -973,6 +973,28 @@ function focusMenu() {
   ];
 }
 
+// "Fjern den" i overlayet: øvelsen slås fra (kan slås til igen under Øvelser), og en anden foreslås.
+function removeCurrentExercise() {
+  const current = coach.current;
+  if (!current) return;
+  const { exercise } = current.suggestion;
+  settings = store.saveSettings({
+    ...settings,
+    disabledExercises: [...new Set([...settings.disabledExercises, exercise.id])],
+  });
+  if (current.settingsOverride) {
+    current.settingsOverride = {
+      ...current.settingsOverride,
+      disabledExercises: [...new Set([...current.settingsOverride.disabledExercises, exercise.id])],
+    };
+  }
+  logEvent(`Øvelse fjernet: ${exercise.name}`);
+  setupWindow?.webContents.send('setup:settings', pick(settings, EDITABLE_KEYS));
+  const next = coach.reroll(Date.now());
+  // Var det den eneste øvelse, der passede, lukkes overlayet uden at tælle som sprunget over.
+  runCommands(next.length ? next : coach.dismiss(Date.now()));
+}
+
 function pauseMenu() {
   return [
     { label: '30 minutter', click: () => pauseExercises(Date.now() + 30 * 60000) },
@@ -1201,6 +1223,10 @@ function registerIpc() {
       setsPerDay: null,
     });
     const inFocus = engine.focusGroups(draftValues.focus, draftValues.customDays);
+    const doneCounts = new Map();
+    for (const entry of store.history) {
+      if (entry.status === 'done') doneCounts.set(entry.exerciseId, (doneCounts.get(entry.exerciseId) || 0) + 1);
+    }
     const groups = Object.keys(MUSCLE_GROUPS)
       .map((group) => ({
         id: group,
@@ -1210,11 +1236,15 @@ function registerIpc() {
         exercises: candidates
           .filter((ex) => ex.muscleGroup === group)
           .map((ex) => {
-            const { amount } = engine.computeAmount(ex, draftValues.level, null);
+            // Din egen mængde: niveauet plus den fremgang, du har haft med øvelsen.
+            const progress = engine.progressionFactor(store.history, ex.id, draftValues.level);
+            const { amount } = engine.computeAmount(ex, draftValues.level, null, progress);
             return {
               id: ex.id,
               name: ex.name,
               amount: engine.describeAmount(ex, amount),
+              progress: Math.round((progress - 1) * 100), // i procent, fx 10 eller -20
+              timesDone: doneCounts.get(ex.id) || 0,
               enabled: !draftValues.disabledExercises.includes(ex.id),
               animation: ex.animation,
               steps: ex.steps,
@@ -1363,6 +1393,7 @@ function registerIpc() {
   ipcMain.on('overlay:easier', (event) => fromOverlay(event) && runCommands(coach.easier(Date.now())));
   ipcMain.on('overlay:snooze', (event) => fromOverlay(event) && runCommands(coach.snooze(Date.now(), SNOOZE_MINUTES)));
   ipcMain.on('overlay:expand', (event) => fromOverlay(event) && runCommands(coach.expand()));
+  ipcMain.on('overlay:remove', (event) => fromOverlay(event) && removeCurrentExercise());
 }
 
 // Vinduerne viser kun vores egne sider – ingen navigation eller pop-ups.

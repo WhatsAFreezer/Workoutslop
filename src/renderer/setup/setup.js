@@ -375,6 +375,7 @@
     const title = el('b');
     const amount = el('small');
     const steps = el('ol');
+    const history = el('p', { class: 'ex-preview-history' });
     const hint = el('p', { class: 'ex-preview-hint' });
     const bars = [1, 2, 3].map(() => el('i'));
     const levelText = el('span');
@@ -388,6 +389,7 @@
       el('div', { class: 'ex-preview-head' }, [title, amount]),
       level,
       steps,
+      history,
       hint,
     ]);
     document.body.append(card);
@@ -423,6 +425,8 @@
         bars.forEach((bar, i) => bar.classList.toggle('on', i < ex.difficulty));
         levelText.textContent = DIFFICULTY_NAMES[ex.difficulty] || '';
         steps.replaceChildren(...ex.steps.map((step) => el('li', { text: step })));
+        history.replaceChildren(...historyText(ex));
+        history.hidden = ex.timesDone === 0 && ex.progress === 0;
       }
       hint.textContent = ex.enabled ? 'Valgt · klik for at fravælge' : 'Ikke valgt · klik for at vælge';
       card.hidden = false;
@@ -477,6 +481,13 @@
       hide,
     };
   })();
+
+  function historyText(ex) {
+    const parts = [ex.timesDone === 1 ? 'Lavet 1 gang' : `Lavet ${ex.timesDone} gange`];
+    if (ex.progress > 0) parts.push(el('b', { class: 'up', text: ` · +${ex.progress} % fremgang` }));
+    else if (ex.progress < 0) parts.push(el('b', { class: 'down', text: ` · ${ex.progress} % (sat ned)` }));
+    return parts;
+  }
 
   async function renderPlan() {
     const plan = await api.plan(draft);
@@ -1206,10 +1217,14 @@
     }
   }
 
-  // Fokus ændret fra ikonet ved uret, mens vinduet er åbent.
+  // Ændret uden for vinduet, mens det er åbent: fokus fra ikonet ved uret, eller en øvelse
+  // fjernet fra overlayet.
+  const EXTERNAL_KEYS = ['focus', 'disabledExercises'];
   function applyExternalSettings(next) {
-    if (!draft || JSON.stringify(draft.focus) === JSON.stringify(next.focus)) return;
-    draft.focus = [...next.focus];
+    if (!draft) return;
+    const changed = EXTERNAL_KEYS.filter((key) => JSON.stringify(draft[key]) !== JSON.stringify(next[key]));
+    if (changed.length === 0) return;
+    for (const key of changed) draft[key] = JSON.parse(JSON.stringify(next[key]));
     if (!saveTimer) markSaved();
     updateCount();
     if (view === 'overview') refreshOverview();
