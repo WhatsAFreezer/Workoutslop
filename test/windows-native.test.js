@@ -13,6 +13,7 @@ test('uden for Windows slås funktionerne stille fra', { skip: process.platform 
     processList: false,
   });
   assert.equal(native.processList(), null);
+  assert.equal(native.taskbarWindows(), null);
   assert.equal(native.readGamepad(0), null);
   assert.equal(native.notificationState(), null);
   assert.equal(native.foregroundWindow(), null);
@@ -61,4 +62,14 @@ test('Windows: listen over kørende programmer læses direkte', { skip: process.
   assert.ok(self, 'egen proces mangler');
   assert.match(self.name, /^node(\.exe)?$/i);
   assert.ok(list.every((p) => typeof p.name === 'string' && p.name.length > 0 && Number.isInteger(p.pid)));
+});
+
+test('Windows: programmer med vindue kan listes med titel', { skip: process.platform !== 'win32' }, () => {
+  const list = native.taskbarWindows();
+  // En build-server har måske ingen vinduer – men kaldet skal virke og give gyldige rækker.
+  assert.ok(Array.isArray(list));
+  for (const w of list) {
+    assert.ok(w.pid > 0 && typeof w.title === 'string' && w.title.length > 0);
+    assert.ok(w.path === null || /\.exe$/i.test(w.path), `sti: ${w.path}`);
+  }
 });
