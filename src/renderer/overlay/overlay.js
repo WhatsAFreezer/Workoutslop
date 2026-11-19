@@ -37,6 +37,8 @@
     payload = next;
     finishing = false;
     const ex = next.exercise;
+    // Størrelsen (Lille/Normal/Stor) – vinduet er gjort tilsvarende bredere.
+    document.documentElement.style.zoom = String(next.zoom || 1);
 
     $('context').textContent = next.context;
     $('muscle').textContent = [ex.muscleGroup, ...ex.equipment].join(' · ');
@@ -58,8 +60,12 @@
     );
     $('tip').textContent = ex.tip || '';
     $('tip').hidden = !ex.tip;
+    // Kender man øvelsen (lavet 3+ gange), fylder vejledningen ikke skærmen.
+    const known = next.timesDone >= 3;
+    $('howto').hidden = known;
+    $('howto-toggle').hidden = !known;
 
-    $('since').textContent = next.sinceText;
+    $('amount').title = next.sinceText;
     $('hint').textContent = `${next.hotkeys.done} = færdig`;
     $('done').title = `Færdig (${next.hotkeys.done})`;
     $('close').title = `Spring over (${next.hotkeys.hide})`;
@@ -126,6 +132,20 @@
     finishing = true;
     clearInterval(timer);
     $('celebrate-text').textContent = `${payload.exercise.name}: ${payload.amount} ${payload.unitLabel}`;
+    const { today } = payload;
+    const done = today ? Math.min(today.target, today.done + (today.counts ? 1 : 0)) : 0;
+    const showProgress = Boolean(today && today.target > 0);
+    $('celebrate-progress').hidden = !showProgress;
+    $('celebrate-title').textContent =
+      showProgress && today.counts && done >= today.target ? 'Dagens sæt er klaret!' : 'Godt gået!';
+    if (showProgress) {
+      // Bjælken vokser fra før til efter øvelsen.
+      $('celebrate-fill').style.width = `${(Math.min(today.target, today.done) / today.target) * 100}%`;
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => ($('celebrate-fill').style.width = `${(done / today.target) * 100}%`)),
+      );
+      $('celebrate-count').textContent = `${done} af ${today.target} sæt i dag`;
+    }
     setMode('celebrate');
     setTimeout(() => api.complete(), 1300);
   }
@@ -173,6 +193,11 @@
   $('snooze').addEventListener('click', () => api.snooze());
   $('compact-open').addEventListener('click', () => api.expand());
   $('timer-btn').addEventListener('click', startTimer);
+  $('howto-toggle').addEventListener('click', () => {
+    $('howto').hidden = false;
+    $('howto-toggle').hidden = true;
+    reportSize();
+  });
   $('remove').addEventListener('click', () => {
     $('remove').disabled = true;
     api.remove();

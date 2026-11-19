@@ -145,3 +145,43 @@ test('er spillet i forgrunden?', () => {
   assert.equal(isGameFocused(null, { path: 'C:\\x\\cs2.exe' }), null);
   assert.equal(isGameFocused(game, null), null);
 });
+
+test('navne man kan genkende, når man selv vælger et program', () => {
+  const { programDisplayName, looksLikeGame } = require('../src/core/game-detection');
+  // Vinduets titel uden version og undertitel.
+  assert.equal(
+    programDisplayName({
+      process: 'javaw.exe',
+      path: 'C:\\Users\\a\\AppData\\Roaming\\.minecraft\\runtime\\java-runtime-gamma\\bin\\javaw.exe',
+      title: 'Minecraft 1.21.1 - Multiplayer (3rd-party Server)',
+    }),
+    'Minecraft',
+  );
+  // Uden titel: mappen, men ikke generiske mapper som "_retail_" eller "Binaries\Win64".
+  assert.equal(
+    programDisplayName({
+      process: 'Overwatch.exe',
+      path: 'C:\\Program Files (x86)\\Overwatch\\_retail_\\Overwatch.exe',
+    }),
+    'Overwatch',
+  );
+  assert.equal(
+    programDisplayName({
+      process: 'Game-Win64-Shipping.exe',
+      path: 'D:\\Spil\\Deep Rock\\Binaries\\Win64\\Game-Win64-Shipping.exe',
+    }),
+    'Deep Rock',
+  );
+  // Titlen er bare filnavnet: brug mappen.
+  assert.equal(
+    programDisplayName({
+      process: 'hollow_knight.exe',
+      path: 'D:\\Games\\Hollow Knight\\hollow_knight.exe',
+      title: 'hollow_knight.exe',
+    }),
+    'Hollow Knight',
+  );
+  assert.equal(programDisplayName({ process: 'MitSpil.exe' }), 'MitSpil');
+  assert.ok(looksLikeGame('D:\\Games\\Hollow Knight\\hollow_knight.exe'));
+  assert.ok(!looksLikeGame('C:\\Program Files\\Notepad++\\notepad++.exe'));
+});

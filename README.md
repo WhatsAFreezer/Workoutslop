@@ -30,8 +30,10 @@ Linket giver altid den nyeste version, og appen opdaterer sig selv bagefter.
    - **Øvelser** – sæt pr. dag for hver muskelgruppe, og hvilke øvelser du vil have. Grupperne i dit fokus er
      fremhævet øverst. Hold musen over en øvelse for at se den som animation med sværhedsgrad.
    - **Pauser** – hvor ofte du vil træne, om inaktivitet skal tælle som pause, hvilket hjørne overlayet skal
-     vises i, og om øvelsen skal læses højt.
-   - **Spil** – de spil appen kender, dine egne spil og den præcise integration til CS2 og Dota 2.
+     vises i, hvor stort det skal være (Lille, Normal eller Stor), og om øvelsen skal læses højt.
+   - **Spil** – de spil appen kender, dine egne spil og den præcise integration til CS2 og Dota 2. Kender appen
+     ikke dit spil, så start det og vælg det på listen over åbne programmer – med ikon og det navn, du kender
+     (fra vinduets titel eller spillets mappe). Kører det ikke, kan du vælge spillets .exe-fil i stedet.
 
    <img src="docs/overview.png" width="640" alt="Oversigten: status, dagens sæt, fokus, ugen og de seneste øvelser">
 
@@ -45,7 +47,9 @@ Linket giver altid den nyeste version, og appen opdaterer sig selv bagefter.
    kører på.
 3. **Lav øvelsen, når overlayet dukker op**, og tryk **Færdig**. Du kan også vælge **Anden** (en anden
    øvelse), **Om 10 min** (udsæt), **For hårdt?** (færre gentagelser) eller **✕** (spring over). Vil du aldrig
-   have en øvelse igen, så tryk **Fjern den** nederst – den kan slås til igen under **Øvelser**.
+   have en øvelse igen, så tryk **Fjern øvelsen** nederst – den kan slås til igen under **Øvelser**. Har du
+   lavet en øvelse et par gange, er vejledningen foldet sammen, så overlayet fylder mindre (**Vis vejledning**
+   folder den ud). Når du trykker **Færdig**, ser du, hvor langt du er med dagens sæt.
 4. Starter næste kamp, før du har trykket på noget, bliver overlayet til en lille bjælke: "Nåede du det?"
 
 ### Genvejstaster (virker også inde i spillet)

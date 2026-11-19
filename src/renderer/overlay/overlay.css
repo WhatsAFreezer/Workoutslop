@@ -118,7 +118,7 @@ svg path {
 .demo svg {
   display: block;
   width: 100%;
-  aspect-ratio: 1.6;
+  aspect-ratio: 2;
 }
 
 .headline {
@@ -126,7 +126,7 @@ svg path {
   justify-content: space-between;
   align-items: flex-end;
   gap: 12px;
-  margin: 12px 2px 6px;
+  margin: 12px 2px 4px;
 }
 .muscle {
   font-size: 12px;
@@ -150,10 +150,18 @@ h1 {
   color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
-.set-progress {
-  display: block;
-  margin-top: 3px;
+.amount-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0 2px 4px;
   font-size: 11.5px;
+}
+.amount-meta:not(:has(:not(:empty):not([hidden]))) {
+  display: none;
+}
+.set-progress {
   font-style: normal;
   font-weight: 650;
   color: var(--accent);
@@ -166,20 +174,14 @@ h1 {
   color: var(--muted);
 }
 .adjust {
-  display: block;
-  max-width: 150px;
-  margin-top: 3px;
-  margin-left: auto;
-  font-size: 11px;
   font-style: normal;
-  line-height: 1.3;
   color: var(--muted);
 }
 .adjust:empty {
   display: none;
 }
 .easier {
-  margin-top: 4px;
+  margin-left: auto;
   padding: 0;
   border: none;
   background: none;
@@ -369,15 +371,14 @@ h1 {
   color: var(--muted);
 }
 
-/* "Fjern den" – diskret, så den ikke trykkes på ved et uheld midt i en pause. */
+/* "Fjern øvelsen" – diskret, så den ikke trykkes på ved et uheld midt i en pause. */
 .remove {
-  display: block;
-  margin: 6px auto 0;
-  padding: 2px 4px;
+  flex: none;
+  padding: 0;
   border: none;
   background: none;
   color: var(--faint);
-  font-size: 11.5px;
+  font: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
@@ -388,4 +389,48 @@ h1 {
 .remove:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+.howto-toggle {
+  display: block;
+  margin: 2px 2px 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.howto-toggle:hover {
+  color: var(--text);
+}
+
+.celebrate > div:last-child {
+  flex: 1;
+  min-width: 0;
+}
+.celebrate-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.celebrate-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--panel-3);
+  overflow: hidden;
+}
+.celebrate-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.6s ease 0.2s;
 }

@@ -293,6 +293,86 @@ class GameFinder {
   }
 }
 
+// --- Navne, når man selv vælger et program -------------------------------------------
+
+// Mapper, der ikke siger noget om, hvilket spil det er (fx "...\Overwatch\_retail_\Overwatch.exe").
+const GENERIC_FOLDERS = new Set(
+  [
+    'bin',
+    'bin32',
+    'bin64',
+    'binaries',
+    'win32',
+    'win64',
+    'windows',
+    'x64',
+    'x86',
+    'game',
+    'games',
+    'retail',
+    '_retail_',
+    '_classic_',
+    'ship',
+    'shipping',
+    'release',
+    'client',
+    'app',
+    'current',
+    'runtime',
+    'jre',
+    'java',
+    'data',
+    'common',
+    'steamapps',
+    'program files',
+    'program files (x86)',
+    'programdata',
+    'appdata',
+    'local',
+    'roaming',
+    'users',
+  ].map(folderKey),
+);
+
+const tidy = (text) => String(text).replace(/\s+/g, ' ').trim();
+
+// Vinduets titel uden versionsnummer og undertitel: "Minecraft 1.21.1 - Multiplayer" -> "Minecraft".
+function cleanTitle(title) {
+  let t = tidy(title || '');
+  t = t.split(/\s[-–—|]\s/)[0];
+  t = t.replace(/\s+v?\d+(\.\d+)+\S*$/i, '').replace(/\s+\((?:64|32)-bit\)$/i, '');
+  return tidy(t).slice(0, 60);
+}
+
+// Første mappe over programmet, der ikke er en generisk mappe som "bin" eller "Win64".
+function folderName(path) {
+  const parts = String(path || '')
+    .split(/[\\/]/)
+    .filter(Boolean);
+  parts.pop(); // selve .exe-filen
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const part = parts[i];
+    if (/^[a-z]:$/i.test(part) || GENERIC_FOLDERS.has(folderKey(part))) continue;
+    return prettyName(part);
+  }
+  return null;
+}
+
+// Det navn, man kan genkende et program på: vinduets titel, ellers mappens navn, ellers filnavnet.
+function programDisplayName({ process: exe, path, title }) {
+  const fileName = basename(exe || path || '');
+  const plain = prettyName(fileName.replace(/\.exe$/i, ''));
+  const fromTitle = cleanTitle(title);
+  if (fromTitle && fromTitle.length >= 2 && fromTitle.toLowerCase() !== fileName.toLowerCase()) return fromTitle;
+  return folderName(path) || plain;
+}
+
+// Er programmet sandsynligvis et spil? Bruges til at sortere listen, når man selv vælger.
+function looksLikeGame(path) {
+  if (!path) return false;
+  return Boolean(gameFromPath(path)) || /[\\/](games?|spil)[\\/]/i.test(path);
+}
+
 // Er spillet i forgrunden? true/false – eller null, hvis det ikke kan afgøres.
 function isGameFocused(game, foreground) {
   if (!game || !foreground?.path) return null;
@@ -300,4 +380,12 @@ function isGameFocused(game, foreground) {
   return game.processes.some((p) => normalizeProcessName(p) === exe);
 }
 
-module.exports = { gameFromPath, isNotGame, isKnownNonGame, GameFinder, isGameFocused };
+module.exports = {
+  gameFromPath,
+  isNotGame,
+  isKnownNonGame,
+  GameFinder,
+  isGameFocused,
+  programDisplayName,
+  looksLikeGame,
+};

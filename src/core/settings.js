@@ -5,6 +5,7 @@ const {
   EQUIPMENT,
   FOCUS_AREAS,
   OVERLAY_POSITIONS,
+  OVERLAY_SIZES,
   DEFAULT_SETS_PER_DAY,
   MAX_SETS_PER_DAY,
   MUSCLE_GROUPS,
@@ -31,6 +32,7 @@ const DEFAULT_SETTINGS = {
   gameSuggestions: [], // programmer der kørte i fuld skærm – måske spil
   ignoredGames: [], // procesnavne brugeren har sagt ikke er spil
   overlayPosition: 'top-right',
+  overlaySize: 'normal', // 'small' | 'normal' | 'large'
   sound: true,
   speak: 'fullscreen', // læs øvelsen højt: 'never' | 'fullscreen' (kun når overlayet ikke kan ses) | 'always'
   openAtLogin: false,
@@ -81,7 +83,10 @@ function normalizeCustomGames(list) {
       String(item?.name ?? '')
         .trim()
         .slice(0, 60) || processName.replace(/\.exe$/i, '');
-    result.push({ name, process: processName });
+    const entry = { name, process: processName };
+    // Stien bruges kun til at vise programmets ikon.
+    if (typeof item.path === 'string' && item.path.length > 0 && item.path.length < 500) entry.path = item.path;
+    result.push(entry);
   }
   return result.slice(0, 40);
 }
@@ -140,6 +145,7 @@ function normalizeSettings(raw = {}) {
       ? [...new Set(raw.ignoredGames.map((n) => String(n).trim().toLowerCase()).filter(Boolean))].slice(0, 100)
       : [],
     overlayPosition: OVERLAY_POSITIONS.includes(raw.overlayPosition) ? raw.overlayPosition : d.overlayPosition,
+    overlaySize: Object.hasOwn(OVERLAY_SIZES, raw.overlaySize) ? raw.overlaySize : d.overlaySize,
     sound: raw.sound == null ? d.sound : Boolean(raw.sound),
     speak: SPEAK_MODES.includes(raw.speak) ? raw.speak : d.speak,
     openAtLogin: Boolean(raw.openAtLogin),

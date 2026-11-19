@@ -27,7 +27,15 @@ const { listProcesses } = require('./process-list');
 const { startGsiServer } = require('./gsi-server');
 const { installIntegration, integrationStatus } = require('./gsi-install');
 const { createUpdater, describeUpdate } = require('./updater');
-const { LEVELS, EQUIPMENT, FREQUENCIES, MUSCLE_GROUPS, FOCUS_AREAS, MAX_SETS_PER_DAY } = require('../core/catalog');
+const {
+  LEVELS,
+  EQUIPMENT,
+  FREQUENCIES,
+  MUSCLE_GROUPS,
+  FOCUS_AREAS,
+  MAX_SETS_PER_DAY,
+  OVERLAY_SIZES,
+} = require('../core/catalog');
 const { EXERCISES } = require('../core/exercises');
 const engine = require('../core/workout-engine');
 const {
@@ -38,7 +46,15 @@ const {
   selectableProcesses,
   normalizeProcessName,
 } = require('../core/games');
-const { GameFinder, isGameFocused, isKnownNonGame, gameFromPath } = require('../core/game-detection');
+const {
+  GameFinder,
+  isGameFocused,
+  isKnownNonGame,
+  isNotGame,
+  gameFromPath,
+  programDisplayName,
+  looksLikeGame,
+} = require('../core/game-detection');
 const { EventLog, formatTime, formatReport } = require('../core/event-log');
 const { INTEGRATIONS, parseGsiPayload } = require('../core/gsi');
 const { normalizeSettings, MAX_CUSTOM_DAYS } = require('../core/settings');
@@ -88,6 +104,7 @@ const EDITABLE_KEYS = [
   'idleSeconds',
   'customGames',
   'overlayPosition',
+  'overlaySize',
   'sound',
   'speak',
   'openAtLogin',
@@ -235,12 +252,15 @@ function trackForeground(now, idleSeconds) {
   if (found?.added) {
     settings = store.saveSettings({
       ...settings,
-      autoGames: [...settings.autoGames, found.added],
+      autoGames: [...settings.autoGames, { ...found.added, path: fg.path }],
       gameSuggestions: settings.gameSuggestions.filter((g) => !same(found.added)(g)),
     });
     scanProcesses();
   } else if (found?.suggested && !settings.gameSuggestions.some(same(found.suggested))) {
-    settings = store.saveSettings({ ...settings, gameSuggestions: [...settings.gameSuggestions, found.suggested] });
+    settings = store.saveSettings({
+      ...settings,
+      gameSuggestions: [...settings.gameSuggestions, { ...found.suggested, path: fg.path }],
+    });
   }
 
   const focused = isGameFocused(detected?.game, fg);
@@ -425,9 +445,18 @@ function sendOverlay(channel, payload) {
   else overlayQueue.push([channel, payload]);
 }
 
-function overlayCorner() {
+// Indstillingerne overlayet vises med – et eksempel fra opsætningen bruger udkastet.
+function overlaySettings() {
   const c = coach.current;
-  return c?.trigger === 'preview' && c.settingsOverride ? c.settingsOverride.overlayPosition : settings.overlayPosition;
+  return c?.trigger === 'preview' && c.settingsOverride ? c.settingsOverride : settings;
+}
+
+function overlayCorner() {
+  return overlaySettings().overlayPosition;
+}
+
+function overlayZoom() {
+  return OVERLAY_SIZES[overlaySettings().overlaySize] ?? 1;
 }
 
 // Skærmen spillet kører på – ellers hovedskærmen.
@@ -449,9 +478,10 @@ function positionOverlay() {
   const area = overlayDisplay().workArea;
   const height = Math.min(Math.round(overlayHeight), area.height - OVERLAY_MARGIN * 2);
   const corner = overlayCorner();
-  const x = corner.endsWith('right') ? area.x + area.width - OVERLAY_WIDTH - OVERLAY_MARGIN : area.x + OVERLAY_MARGIN;
+  const width = Math.round(OVERLAY_WIDTH * overlayZoom());
+  const x = corner.endsWith('right') ? area.x + area.width - width - OVERLAY_MARGIN : area.x + OVERLAY_MARGIN;
   const y = corner.startsWith('top') ? area.y + OVERLAY_MARGIN : area.y + area.height - height - OVERLAY_MARGIN;
-  overlayWindow.setBounds({ x: Math.round(x), y: Math.round(y), width: OVERLAY_WIDTH, height });
+  overlayWindow.setBounds({ x: Math.round(x), y: Math.round(y), width, height });
 }
 
 // Overlayet vises først, når siden har målt sin højde – så det ikke hopper.
@@ -513,6 +543,14 @@ function contextLabel(current) {
 }
 
 // "sæt 2 af 3 i dag" for øvelsens muskelgruppe.
+// Dagens sæt til "Godt gået"-kortet. counts: tæller øvelsen med i dagens mål, når den er lavet?
+function todayProgress(current, exercise) {
+  const plan = engine.dailyPlan(EXERCISES, current.settingsOverride || settings, store.history, Date.now());
+  const group = plan.perGroup[exercise.muscleGroup];
+  const counts = current.trigger !== 'preview' && Boolean(group) && group.done < group.target;
+  return { done: plan.done, target: plan.target, counts };
+}
+
 function setProgressText(exercise, activeSettings) {
   const group = engine.dailyPlan(EXERCISES, activeSettings, store.history, Date.now()).perGroup[exercise.muscleGroup];
   if (!group || group.target === 0) return '';
@@ -575,6 +613,10 @@ function overlayPayload(current, fresh) {
     canEase: engine.easierSuggestion(suggestion) != null,
     sinceText: engine.describeTimeSince(suggestion.minutesSinceLast),
     setText: setProgressText(ex, current.settingsOverride || settings),
+    today: todayProgress(current, ex),
+    // Har man lavet øvelsen et par gange, foldes vejledningen sammen.
+    timesDone: store.history.filter((h) => h.exerciseId === ex.id && h.status === 'done').length,
+    zoom: overlayZoom(),
     hotkeys: { done: hotkeyLabel('done'), hide: hotkeyLabel('hide') },
     snoozeMinutes: SNOOZE_MINUTES,
     sound: settings.sound,
@@ -1020,6 +1062,71 @@ function removeCurrentExercise() {
   runCommands(next.length ? next : coach.dismiss(Date.now()));
 }
 
+// --- Vælg et spil selv ------------------------------------------------------------------
+
+const iconCache = new Map();
+
+// Programmets ikon som data-URL (eller null). Gemmes, så det ikke hentes igen hvert par sekunder.
+async function fileIcon(file) {
+  if (typeof file !== 'string' || !file || file.length > 1000) return null;
+  if (iconCache.has(file)) return iconCache.get(file);
+  let url = null;
+  try {
+    const image = await app.getFileIcon(file, { size: 'normal' });
+    url = image.isEmpty() ? null : image.toDataURL();
+  } catch {
+    url = null;
+  }
+  if (iconCache.size > 300) iconCache.clear();
+  iconCache.set(file, url);
+  return url;
+}
+
+// Hvad Workoutslop allerede ved om et program: tilføjet af dig, fundet automatisk eller et kendt spil.
+function programStatus(exe) {
+  const key = normalizeProcessName(exe);
+  const same = (g) => normalizeProcessName(g.process) === key;
+  if (settings.customGames.some(same)) return { status: 'custom' };
+  const auto = settings.autoGames.find(same);
+  if (auto) return { status: 'auto', gameName: auto.name };
+  const known = KNOWN_GAMES.find((g) => g.processes.some((p) => normalizeProcessName(p) === key));
+  if (known) return { status: 'known', gameName: known.name };
+  return { status: 'new' };
+}
+
+// Programmerne, man kan vælge imellem: på Windows dem med et vindue på proceslinjen (med titel,
+// sti og ikon), ellers alle kørende programmer. Sandsynlige spil først.
+async function programList() {
+  const windows = windowsNative.taskbarWindows();
+  const raw = windows
+    ? windows
+        .filter((w) => w.path)
+        .map((w) => ({ process: path.basename(w.path.replace(/\\/g, '/')), path: w.path, title: w.title }))
+    : (await listProcesses())
+        // Uden for Windows: spring systemets egne tråde over (fx "kworker/0:1").
+        .filter((p) => /^[a-z]/i.test(p.name) && !/[:[\]]/.test(p.name))
+        .map((p) => ({ process: p.name, path: null, title: '' }));
+  const allowed = new Set(selectableProcesses(raw.map((p) => p.process)).map(normalizeProcessName));
+  const seen = new Set();
+  const items = [];
+  for (const program of raw) {
+    const key = normalizeProcessName(program.process);
+    if (!allowed.has(key) || seen.has(key) || key === normalizeProcessName(path.basename(process.execPath))) continue;
+    seen.add(key);
+    const notGame = isNotGame(program.path || program.process);
+    items.push({
+      ...program,
+      name: programDisplayName(program),
+      likelyGame: !notGame && (looksLikeGame(program.path) || programStatus(program.process).status !== 'new'),
+      notGame,
+      icon: await fileIcon(program.path),
+      ...programStatus(program.process),
+    });
+  }
+  const rank = (p) => (p.likelyGame ? 0 : p.notGame ? 2 : 1);
+  return items.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'da', { sensitivity: 'base' }));
+}
+
 function pauseMenu() {
   return [
     { label: '30 minutter', click: () => pauseExercises(Date.now() + 30 * 60000) },
@@ -1282,9 +1389,27 @@ function registerIpc() {
     return { groups, wholeBody: !inFocus, maxSets: MAX_SETS_PER_DAY };
   });
 
-  ipcMain.handle('setup:processes', async (event) => {
-    if (!fromSetup(event)) return [];
-    return selectableProcesses((await listProcesses()).map((p) => p.name));
+  ipcMain.handle('setup:programs', async (event) => (fromSetup(event) ? programList() : []));
+  ipcMain.handle('setup:icon', async (event, file) => (fromSetup(event) ? fileIcon(file) : null));
+
+  // "Vælg spillets .exe-fil": til spil, der ikke kører lige nu.
+  ipcMain.handle('setup:pick-exe', async (event) => {
+    if (!fromSetup(event)) return null;
+    const choice = await dialog.showOpenDialog(setupWindow, {
+      title: 'Vælg spillets program (.exe)',
+      buttonLabel: 'Vælg',
+      properties: ['openFile'],
+      filters: process.platform === 'win32' ? [{ name: 'Programmer', extensions: ['exe'] }] : [],
+    });
+    const file = choice.canceled ? null : choice.filePaths[0];
+    if (!file) return null;
+    const exe = path.basename(file);
+    return {
+      process: exe,
+      path: file,
+      name: programDisplayName({ process: exe, path: file }),
+      icon: await fileIcon(file),
+    };
   });
 
   ipcMain.handle('setup:install-integration', async (event, id) => {

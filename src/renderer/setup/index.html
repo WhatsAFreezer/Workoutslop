@@ -322,6 +322,9 @@
                   <b>kantløst vindue</b> (borderless).
                 </p>
               </div>
+              <h2 class="subheading">Størrelse</h2>
+              <div class="segmented" id="overlay-size" role="radiogroup" aria-label="Overlayets størrelse"></div>
+              <p class="hint">Tryk på <b>Vis et eksempel</b> nederst for at se, hvordan det ser ud.</p>
             </div>
 
             <div class="field">
@@ -399,20 +402,36 @@
             <div class="field">
               <h2>Tilføj dit eget spil</h2>
               <p class="hint">
-                Start spillet, tryk på <b>Find kørende programmer</b> og vælg det på listen – eller skriv programnavnet,
-                fx <code>javaw.exe</code> for Minecraft Java Edition.
+                Kender Workoutslop ikke dit spil? Start det, og vælg det her. Listen viser de programmer, der har et
+                vindue åbent, med de mest sandsynlige spil øverst – og opdaterer sig selv.
               </p>
-              <div class="add-row">
-                <input
-                  id="custom-process"
-                  list="process-list"
-                  placeholder="Programnavn, fx MitSpil.exe"
-                  autocomplete="off"
-                />
-                <datalist id="process-list"></datalist>
-                <button type="button" class="btn" id="refresh-processes">Find kørende programmer</button>
+              <div class="picker">
+                <div class="picker-bar">
+                  <input
+                    id="program-search"
+                    class="text-input"
+                    type="search"
+                    placeholder="Søg efter et program, fx Minecraft"
+                    autocomplete="off"
+                    aria-label="Søg efter et program"
+                  />
+                  <button type="button" class="btn small" id="refresh-programs">Opdatér listen</button>
+                </div>
+                <ul class="program-list" id="program-list" aria-label="Kørende programmer"></ul>
+              </div>
+              <div class="add-other">
+                <span>Kører spillet ikke lige nu?</span>
+                <button type="button" class="btn small" id="pick-exe">Vælg spillets .exe-fil …</button>
+                <button type="button" class="inline-link" id="manual-toggle" aria-expanded="false">
+                  Skriv programnavnet selv
+                </button>
+              </div>
+              <div class="add-row" id="manual-row" hidden>
+                <input id="custom-process" placeholder="Programnavn, fx MitSpil.exe" autocomplete="off" />
                 <button type="button" class="btn primary" id="add-game">Tilføj</button>
               </div>
+
+              <h2 class="subheading">Dine spil</h2>
               <ul class="custom-list" id="custom-games"></ul>
             </div>
 

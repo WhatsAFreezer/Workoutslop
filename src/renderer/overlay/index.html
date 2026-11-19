@@ -31,12 +31,14 @@
           <div class="amount">
             <strong id="amount"></strong>
             <span id="unit"></span>
-            <em id="set-progress" class="set-progress"></em>
-            <em id="adjust" class="adjust"></em>
-            <button id="easier" class="easier" type="button" title="Sæt mængden ned – også næste gang">
-              For hårdt?
-            </button>
           </div>
+        </div>
+        <div class="amount-meta">
+          <em id="set-progress" class="set-progress"></em>
+          <em id="adjust" class="adjust"></em>
+          <button id="easier" class="easier" type="button" title="Sæt mængden ned – også næste gang">
+            For hårdt?
+          </button>
         </div>
 
         <div id="timer" class="timer" hidden>
@@ -44,8 +46,11 @@
           <div class="timer-track"><div id="timer-fill" class="timer-fill"></div></div>
         </div>
 
-        <ol id="steps" class="steps"></ol>
-        <p id="tip" class="tip"></p>
+        <div id="howto">
+          <ol id="steps" class="steps"></ol>
+          <p id="tip" class="tip"></p>
+        </div>
+        <button id="howto-toggle" class="howto-toggle" type="button" hidden>Vis vejledning</button>
 
         <div class="actions">
           <button id="done" class="btn primary" type="button">
@@ -60,12 +65,16 @@
         </div>
 
         <footer class="meta">
-          <span id="since"></span>
           <span id="hint"></span>
+          <button
+            id="remove"
+            class="remove"
+            type="button"
+            title="Øvelsen foreslås ikke igen. Du kan slå den til under Øvelser."
+          >
+            Fjern øvelsen
+          </button>
         </footer>
-        <button id="remove" class="remove" type="button" title="Du kan slå den til igen under Øvelser">
-          Vil du aldrig have den øvelse? Fjern den
-        </button>
       </section>
 
       <!-- Lille visning når kampen er startet igen -->
@@ -88,8 +97,12 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
         </div>
         <div>
-          <div class="celebrate-title">Godt gået!</div>
+          <div class="celebrate-title" id="celebrate-title">Godt gået!</div>
           <div id="celebrate-text" class="celebrate-text"></div>
+          <div class="celebrate-progress" id="celebrate-progress" hidden>
+            <div class="celebrate-track"><div class="celebrate-fill" id="celebrate-fill"></div></div>
+            <span id="celebrate-count"></span>
+          </div>
         </div>
       </section>
     </main>

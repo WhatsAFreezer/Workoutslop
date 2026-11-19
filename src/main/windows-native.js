@@ -28,6 +28,9 @@ const SWP_NOSIZE = 0x0001;
 const SWP_NOMOVE = 0x0002;
 const SWP_NOACTIVATE = 0x0010;
 const GWL_STYLE = -16;
+const GWL_EXSTYLE = -20;
+const WS_EX_TOOLWINDOW = 0x00000080; // små værktøjsvinduer, der ikke står på proceslinjen
+const GW_OWNER = 4;
 const WS_CAPTION = 0x00c00000; // titellinje – et almindeligt (evt. maksimeret) vindue
 const TH32CS_SNAPPROCESS = 0x00000002;
 const INVALID_HANDLE_VALUE = -1;
@@ -112,6 +115,8 @@ function load() {
     return {
       EnumWindows: user32.func('int __stdcall EnumWindows(EnumWindowsProc *lpEnumFunc, intptr_t lParam)'),
       IsWindowVisible: user32.func('int __stdcall IsWindowVisible(intptr_t hWnd)'),
+      GetWindow: user32.func('intptr_t __stdcall GetWindow(intptr_t hWnd, uint32 uCmd)'),
+      GetWindowTextW: user32.func('int __stdcall GetWindowTextW(intptr_t hWnd, _Out_ uint8 *lpString, int nMaxCount)'),
     };
   });
 
@@ -262,6 +267,34 @@ function processList() {
   }
 }
 
+// Programmer med et vindue på proceslinjen: [{ pid, path, title }] – eller null.
+// Bruges, når man selv vælger et spil, så man kan se, hvad programmet er.
+function taskbarWindows() {
+  const api = load();
+  const win = api?.window;
+  const list = api?.enumWindows;
+  if (!win || !list) return null;
+  const byPid = new Map();
+  const pid = [0];
+  const text = Buffer.alloc(512);
+  const ok = tryLoad(() =>
+    list.EnumWindows((handle) => {
+      const hwnd = Number(handle);
+      if (!list.IsWindowVisible(hwnd) || Number(list.GetWindow(hwnd, GW_OWNER))) return 1;
+      if (Number(win.GetWindowLongPtrW(hwnd, GWL_EXSTYLE)) & WS_EX_TOOLWINDOW) return 1;
+      const length = list.GetWindowTextW(hwnd, text, 256);
+      const title = length > 0 ? text.toString('utf16le', 0, length * 2).trim() : '';
+      pid[0] = 0;
+      win.GetWindowThreadProcessId(hwnd, pid);
+      if (!pid[0] || !title || pid[0] === process.pid) return 1;
+      if (!byPid.has(pid[0])) byPid.set(pid[0], title); // det første (øverste) vindue
+      return 1;
+    }, 0),
+  );
+  if (!ok) return null;
+  return [...byPid].map(([id, title]) => ({ pid: id, path: processPath(win, id), title }));
+}
+
 // Lægger et vindue øverst blandt "altid øverst"-vinduer uden at give det fokus.
 // `handle` er Buffer'en fra BrowserWindow.getNativeWindowHandle().
 function bringToTop(handle) {
@@ -289,6 +322,7 @@ module.exports = {
   foregroundWindow,
   visibleWindowPids,
   processList,
+  taskbarWindows,
   bringToTop,
   capabilities,
 };

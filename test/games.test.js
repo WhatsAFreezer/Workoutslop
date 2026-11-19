@@ -141,7 +141,13 @@ test('indstillinger gøres gyldige', () => {
     idleSeconds: 2,
     minMinutesBetween: 'abc',
     overlayPosition: 'middle',
-    customGames: [{ process: ' MyGame.exe ' }, { process: 'mygame.exe' }, { process: '' }],
+    overlaySize: 'huge',
+    customGames: [
+      { process: ' MyGame.exe ', path: 'D:\\Spil\\MyGame.exe' },
+      { process: 'mygame.exe' },
+      { process: '' },
+      { process: 'Other.exe', path: 42 },
+    ],
     gsiToken: 'not-hex',
     integrationFiles: { cs2: 'C:\\cfg', evil: 'x' },
     focus: ['arms', 'legs', 'arms', 'backPosture'],
@@ -154,7 +160,12 @@ test('indstillinger gøres gyldige', () => {
   assert.equal(s.idleSeconds, 10);
   assert.equal(s.minMinutesBetween, 10);
   assert.equal(s.overlayPosition, 'top-right');
-  assert.deepEqual(s.customGames, [{ name: 'MyGame', process: 'MyGame.exe' }]);
+  assert.equal(s.overlaySize, 'normal');
+  assert.equal(normalizeSettings({ overlaySize: 'large' }).overlaySize, 'large');
+  assert.deepEqual(s.customGames, [
+    { name: 'MyGame', process: 'MyGame.exe', path: 'D:\\Spil\\MyGame.exe' },
+    { name: 'Other', process: 'Other.exe' },
+  ]);
   assert.equal(s.gsiToken, '');
   assert.deepEqual(s.integrationFiles, { cs2: 'C:\\cfg' });
   assert.deepEqual(s.focus, ['arms', 'backPosture']);

@@ -88,6 +88,9 @@ const FOCUS_AREAS = [
 
 const OVERLAY_POSITIONS = ['top-right', 'top-left', 'bottom-right', 'bottom-left'];
 
+// Overlayets størrelse: forstørrelse af hele kortet (fx til en 4K-skærm eller en lille bærbar).
+const OVERLAY_SIZES = { small: 0.85, normal: 1, large: 1.2 };
+
 module.exports = {
   LEVELS,
   EQUIPMENT,
@@ -97,4 +100,5 @@ module.exports = {
   MAX_SETS_PER_DAY,
   FOCUS_AREAS,
   OVERLAY_POSITIONS,
+  OVERLAY_SIZES,
 };

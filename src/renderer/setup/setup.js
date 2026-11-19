@@ -670,6 +670,32 @@
     $('focus-row').hidden = !data.native.foregroundWindow;
   }
 
+  const OVERLAY_SIZE_OPTIONS = [
+    { id: 'small', name: 'Lille' },
+    { id: 'normal', name: 'Normal' },
+    { id: 'large', name: 'Stor', small: 'fx til en 4K-skærm' },
+  ];
+
+  function renderOverlaySize() {
+    $('overlay-size').replaceChildren(
+      ...OVERLAY_SIZE_OPTIONS.map((option) =>
+        el(
+          'button',
+          {
+            type: 'button',
+            role: 'radio',
+            'aria-checked': String(draft.overlaySize === option.id),
+            onclick: () => {
+              draft.overlaySize = option.id;
+              renderOverlaySize();
+            },
+          },
+          [el('b', { text: option.name }), option.small ? el('small', { text: option.small }) : null],
+        ),
+      ),
+    );
+  }
+
   function renderCorners() {
     for (const button of $('corners').querySelectorAll('button')) {
       button.setAttribute('role', 'radio');
@@ -741,6 +767,47 @@
     );
   }
 
+  // --- Egne spil ---------------------------------------------------------------------
+
+  const sameProcess = (a, b) => a.toLowerCase().replace(/\.exe$/, '') === b.toLowerCase().replace(/\.exe$/, '');
+  const GAME_ICON =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 8h9a4.5 4.5 0 0 1 4.4 5.4l-.6 2.9a2 2 0 0 1-3.5.9L15.2 15H8.8l-1.6 2.2a2 2 0 0 1-3.5-.9l-.6-2.9A4.5 4.5 0 0 1 7.5 8z"/></svg>';
+  const icons = new Map(); // sti -> data-URL (eller null)
+
+  // Programmets ikon – eller et lille spilikon, hvis det ikke kendes.
+  function programIcon(file, known) {
+    const box = el('span', { class: 'program-icon', html: GAME_ICON });
+    const show = (url) => url && box.replaceChildren(el('img', { src: url, alt: '' }));
+    if (known !== undefined) icons.set(file, known);
+    if (!file) return box;
+    if (icons.has(file)) show(icons.get(file));
+    else
+      api.icon(file).then((url) => {
+        icons.set(file, url);
+        show(url);
+      });
+    return box;
+  }
+
+  // Den sidste del af stien, fx "…\Hollow Knight" – nok til at se, hvor programmet ligger.
+  function shortFolder(file) {
+    if (!file) return '';
+    const parts = file.split(/[\\/]/).filter(Boolean);
+    parts.pop();
+    return parts.length > 2 ? `…\\${parts.slice(-2).join('\\')}` : parts.join('\\');
+  }
+
+  function addGame(game) {
+    if (draft.customGames.some((g) => sameProcess(g.process, game.process))) return;
+    const entry = { name: game.name.slice(0, 60), process: game.process };
+    if (game.path) entry.path = game.path;
+    draft.customGames.push(entry);
+    checkDirty(); // kan ske efter et klik er færdigt (fx når filvælgeren lukkes)
+    setStatus(`${entry.name} er tilføjet – det findes næste gang, du starter det.`);
+    renderCustomGames();
+    renderPrograms();
+  }
+
   function renderCustomGames() {
     const list = $('custom-games');
     if (draft.customGames.length === 0) {
@@ -749,8 +816,23 @@
     }
     list.replaceChildren(
       ...draft.customGames.map((game, index) =>
-        el('li', {}, [
-          el('span', {}, [game.name, ' ', el('small', { text: game.process })]),
+        el('li', { class: 'game-row' }, [
+          programIcon(game.path),
+          el('span', { class: 'game-text' }, [
+            // Navnet kan rettes direkte i listen.
+            el('input', {
+              class: 'name-input',
+              value: game.name,
+              maxlength: '60',
+              'aria-label': `Navn på ${game.process}`,
+              title: 'Klik for at omdøbe',
+              onchange: (e) => {
+                game.name = e.target.value.replace(/\s+/g, ' ').trim() || game.process.replace(/\.exe$/i, '');
+                e.target.value = game.name;
+              },
+            }),
+            el('small', { text: game.path ? `${game.process} · ${shortFolder(game.path)}` : game.process }),
+          ]),
           el('button', {
             type: 'button',
             class: 'btn small ghost',
@@ -758,6 +840,7 @@
             onclick: () => {
               draft.customGames.splice(index, 1);
               renderCustomGames();
+              renderPrograms();
             },
           }),
         ]),
@@ -765,34 +848,95 @@
     );
   }
 
-  function addCustomGame() {
+  function addManualGame() {
     const input = $('custom-process');
-    const processName = input.value.trim();
+    const processName = input.value.trim().split(/[\\/]/).pop();
     if (!processName) {
       input.focus();
       return;
     }
-    const exists = draft.customGames.some((g) => g.process.toLowerCase() === processName.toLowerCase());
-    if (!exists) {
-      const name = processName
-        .split(/[\\/]/)
-        .pop()
-        .replace(/\.exe$/i, '');
-      draft.customGames.push({ name, process: processName });
-      setStatus(`${name} er tilføjet.`);
-    }
+    addGame({ name: processName.replace(/\.exe$/i, ''), process: processName });
     input.value = '';
-    renderCustomGames();
   }
 
-  async function findProcesses() {
-    const button = $('refresh-processes');
-    button.disabled = true;
-    const names = await api.listProcesses();
-    button.disabled = false;
-    $('process-list').replaceChildren(...names.map((name) => el('option', { value: name })));
-    setStatus(`Fandt ${names.length} kørende programmer – klik i feltet og vælg dit spil.`);
-    $('custom-process').focus();
+  // Kørende programmer at vælge imellem. Hentes, når siden vises, og igen hvert par sekunder.
+  let programs = null;
+  let programsJson = '';
+
+  async function loadPrograms() {
+    const next = await api.listPrograms();
+    const json = JSON.stringify(next.map((p) => [p.process, p.name, p.status, p.path]));
+    if (json === programsJson) return;
+    programsJson = json;
+    programs = next;
+    for (const p of programs) if (p.path) icons.set(p.path, p.icon);
+    renderPrograms();
+  }
+
+  function programRow(program) {
+    const mine = draft.customGames.some((g) => sameProcess(g.process, program.process));
+    let action;
+    if (mine) action = el('span', { class: 'program-badge ok', text: '✓ Tilføjet' });
+    else if (program.status === 'known' || program.status === 'auto')
+      action = el('span', {
+        class: 'program-badge',
+        text: program.status === 'known' ? 'Kendes allerede' : 'Fundet automatisk',
+        title: `Workoutslop finder allerede ${program.gameName} af sig selv.`,
+      });
+    else
+      action = el('button', {
+        type: 'button',
+        class: 'btn small primary',
+        text: 'Tilføj',
+        'aria-label': `Tilføj ${program.name}`,
+        onclick: () => addGame(program),
+      });
+    const details = [program.process, shortFolder(program.path)].filter(Boolean).join(' · ');
+    return el('li', { class: 'game-row', title: program.path || program.process }, [
+      programIcon(program.path, program.icon),
+      el('span', { class: 'game-text' }, [el('b', { text: program.name }), el('small', { text: details })]),
+      action,
+    ]);
+  }
+
+  function renderPrograms() {
+    const list = $('program-list');
+    if (!programs) {
+      list.replaceChildren(el('li', { class: 'empty', text: 'Henter programmer …' }));
+      return;
+    }
+    const query = $('program-search').value.trim().toLowerCase();
+    const shown = programs.filter(
+      (p) => !query || `${p.name} ${p.process} ${p.title || ''} ${p.path || ''}`.toLowerCase().includes(query),
+    );
+    if (shown.length === 0) {
+      list.replaceChildren(
+        el('li', {
+          class: 'empty',
+          text: query
+            ? `Intet program matcher "${$('program-search').value.trim()}". Kører spillet? Ellers vælg dets .exe-fil nedenfor.`
+            : 'Ingen programmer med et åbent vindue lige nu. Start spillet – så dukker det op her.',
+        }),
+      );
+      return;
+    }
+    const likely = shown.filter((p) => p.likelyGame);
+    const others = shown.filter((p) => !p.likelyGame);
+    list.replaceChildren(
+      ...(likely.length
+        ? [el('li', { class: 'program-heading', text: 'Ligner spil' }), ...likely.map(programRow)]
+        : []),
+      ...(others.length
+        ? [el('li', { class: 'program-heading', text: 'Andre programmer' }), ...others.map(programRow)]
+        : []),
+    );
+  }
+
+  async function pickExe() {
+    const game = await api.pickExe();
+    if (!game) return;
+    if (game.path) icons.set(game.path, game.icon);
+    addGame(game);
   }
 
   function renderHotkeys() {
@@ -824,7 +968,11 @@
   // --- Fundne spil (trin 6) ---------------------------------------------------------
 
   function gameRow(game, buttons) {
-    return el('li', {}, [el('span', {}, [game.name, ' ', el('small', { text: game.process })]), ...buttons]);
+    return el('li', { class: 'game-row' }, [
+      programIcon(game.path),
+      el('span', { class: 'game-text' }, [el('b', { text: game.name }), el('small', { text: game.process })]),
+      ...buttons,
+    ]);
   }
 
   function renderFoundGames() {
@@ -1179,6 +1327,7 @@
     $('save').hidden = !data.firstRun || !last;
     document.querySelector('.scroll').scrollTop = 0;
     setStatus('');
+    if (step === STEP_COUNT - 1) loadPrograms();
   }
 
   function applyMode() {
@@ -1324,11 +1473,24 @@
     });
 
     $('speak-test').addEventListener('click', testSpeech);
-    $('add-game').addEventListener('click', addCustomGame);
+    $('add-game').addEventListener('click', addManualGame);
     $('custom-process').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') addCustomGame();
+      if (e.key === 'Enter') addManualGame();
     });
-    $('refresh-processes').addEventListener('click', findProcesses);
+    $('refresh-programs').addEventListener('click', async () => {
+      $('refresh-programs').disabled = true;
+      programsJson = '';
+      await loadPrograms();
+      $('refresh-programs').disabled = false;
+    });
+    $('program-search').addEventListener('input', renderPrograms);
+    $('pick-exe').addEventListener('click', pickExe);
+    $('manual-toggle').addEventListener('click', () => {
+      const row = $('manual-row');
+      row.hidden = !row.hidden;
+      $('manual-toggle').setAttribute('aria-expanded', String(!row.hidden));
+      if (!row.hidden) $('custom-process').focus();
+    });
   }
 
   async function init() {
@@ -1345,6 +1507,7 @@
     renderIdle();
     renderSpeak();
     renderCorners();
+    renderOverlaySize();
     renderToggles();
     renderIntegrations();
     renderKnownGames();
@@ -1360,6 +1523,7 @@
     setInterval(() => {
       if (view === 'overview') refreshOverview();
       else if (view === 'debug') refreshDebug();
+      else if (step === STEP_COUNT - 1 && !document.hidden) loadPrograms();
     }, 2000);
   }
 

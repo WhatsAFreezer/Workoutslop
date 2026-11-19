@@ -642,9 +642,6 @@ code {
   border: 1px solid var(--border);
   font-size: 14px;
 }
-.custom-list li span {
-  flex: 1;
-}
 .custom-list li small {
   color: var(--muted);
 }
@@ -1735,4 +1732,153 @@ button:focus-visible {
 }
 .configured .eyebrow {
   display: none;
+}
+
+/* Vælg et spil (trin 6) ------------------------------------------------------------- */
+.picker {
+  margin-top: 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  overflow: hidden;
+}
+.picker-bar {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.picker-bar .text-input {
+  flex: 1;
+  max-width: none;
+  padding: 8px 12px;
+  background: var(--bg);
+}
+/* Listen har sin egen scrollbar, så resten af siden ikke skal scrolles for at se den. */
+.program-list {
+  max-height: 340px;
+  margin: 0;
+  padding: 4px 6px 6px;
+  overflow-y: auto;
+  list-style: none;
+}
+.program-heading {
+  padding: 10px 8px 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.program-list .empty {
+  padding: 18px 10px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.game-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.program-list .game-row {
+  padding: 7px 8px;
+  border-radius: 10px;
+}
+.program-list .game-row:hover {
+  background: var(--panel-2);
+}
+.program-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--panel-3);
+  overflow: hidden;
+}
+.program-icon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.program-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+.game-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.game-text b {
+  font-size: 14px;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.game-text small {
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.custom-list li.game-row {
+  padding: 8px 8px 8px 10px;
+}
+.custom-list li .game-text {
+  flex: 1;
+}
+.program-badge {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--panel-3);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.program-badge.ok {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.add-other {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 12px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.add-other .inline-link {
+  font-size: 13px;
+}
+.name-input {
+  width: 100%;
+  min-width: 0;
+  padding: 2px 6px;
+  margin-left: -6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+}
+.name-input:hover {
+  border-color: var(--border);
+}
+.name-input:focus {
+  border-color: var(--accent);
+  outline: none;
+  background: var(--bg);
 }
